@@ -1,1 +1,2 @@
-# kubernetes-academy
+# Kubernetes Academy
+
