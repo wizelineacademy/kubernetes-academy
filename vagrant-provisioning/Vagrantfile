@@ -18,6 +18,8 @@ Vagrant.configure(2) do |config|
       v.cpus = 2
     end
     kmaster.vm.provision "shell", path: "bootstrap_kmaster.sh"
+    kmaster.vm.synced_folder "../lesson01/", "/lesson01"
+    kmaster.vm.synced_folder "../lesson02/", "/lesson02"
   end
 
   NodeCount = 2

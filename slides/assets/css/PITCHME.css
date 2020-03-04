@@ -1,0 +1,118 @@
+:root {
+  --color-blue-highlighted:#00b5c2;
+  --color-blue-highlighted-2:#28b2bf;
+  --color-starling-red:#f2575d;
+  --color-pink-line:#902e57;
+  --color-yellow-line:#f5b335;
+  --color-light-gray:#848484;
+  --color-light-gray-2:#f6f6f6;
+  --color-light-gray-3:#b1bbbd;
+  --color-dark-gray:#262e30;
+  --color-dark-gray-2:#1f2426;
+  --color-light-text:#fff;
+  --color-light-text-2:#d9e0e3;
+  --color-fade:#f6f6f6;
+  --color-link:#740b36;
+  --color-link-active:#7a274a;
+  --color-dark:#000;
+  --color-dark-high-emphasis:rgba(0,0,0,0.87);
+  --color-dark-medium-emphasis:rgba(0,0,0,0.6);
+  --color-dark-low-emphasis:rgba(0,0,0,0.38);
+  --color-light:#fff;
+  --color-light-high-emphasis:#fff;
+  --color-light-medium-emphasis:hsla(0,0%,100%,0.6);
+  --color-light-low-emphasis:hsla(0,0%,100%,0.38);
+  --font-proximanova-regular:"ProximaNova-Regular","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --font-proximanova-light:"ProximaNova-Light","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --font-proximanova-bold:"ProximaNova-Bold","HelveticaNeue","Helvetica","Arial",sans-serif;
+  --font-proximanova-semibold:"ProximaNova-Semibold","Helvetica Neue","Helvetica","Arial",sans-serif;
+}
+
+h1 {
+    font-family: ProximaNova-Bold,HelveticaNeue,Helvetica,Arial,sans-serif;
+    font-family: var(--font-proximanova-bold);
+    font-size: 3.2rem;
+    line-height: 1.3;
+    margin: 0
+}
+
+
+/** Reveal.js Core Override Styles **/
+
+.reveal ol li {
+  margin-left: 0;
+  padding-right: 0;
+  list-style-type: none;
+}
+
+.reveal ol li {
+position: relative;
+counter-increment: step-counter;
+}
+
+.reveal ol li::before {
+color: white;
+font-size: 80%;
+font-weight: bold;
+padding: 3px 10px;
+margin-right: 15px;
+border-radius: 3px;
+background-color: #F26225;
+content: counter(step-counter);
+}
+
+.reveal section img {
+border: none;
+box-shadow: none;
+background: none;
+}
+
+.reveal .slide-number {
+color: black !important;
+}
+
+.reveal blockquote {
+  width: 100%;
+  padding: 17px;
+  border-radius: 17px;
+  background: rgba(255,255,255,0.2);
+}
+
+.reveal pre {
+width: 98%;
+margin: 0px;
+box-shadow: none;
+}
+
+.reveal pre code {
+font-size: 1.0em;
+line-height: 1.2;
+border-radius: 10px;
+max-height: 63vh !important;
+overflow-y: hidden !important;
+overflow-x: auto !important;
+
+}
+
+@media (device-width: 100vw) and (device-height: 100vh) {
+.reveal pre code {
+  max-height: 50vh !important;
+}
+}
+
+.hljs {
+background: none;
+}
+
+.reveal p span.slide-title {
+display: none;
+}
+
+.reveal .slides section .code-presenting-annotation {
+color: white;
+background: black;
+padding: 1px 15px;
+border-radius: 15px;
+opacity: 0.75 !important;
+font-size: 50% !important;
+}

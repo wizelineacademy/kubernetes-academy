@@ -1,0 +1,52 @@
+# GitPitch In-60-Seconds - A Very Short Tutorial.
+#
+
+#
+# Theme Setting
+# Doc: https://gitpitch.com/docs/settings/theme
+#
+theme: simple
+
+#
+# Theme-Override Setting
+# Doc: https://gitpitch.com/docs/settings/custom-theme
+#
+theme-override: slides/assets/css/PITCHME.css
+
+#
+# Logo Setting
+# https://gitpitch.com/docs/settings/logo
+#
+logo: slides/assets/img/logo.png
+logo-postion: top-left
+
+#
+# Layout Setting
+# Doc: https://gitpitch.com/docs/settings/layout
+#
+layout: center
+
+#
+# Footnote Setting
+# Doc: https://gitpitch.com/docs/settings/footnote
+#
+footnote: "wizeline.com - <strong>Wizeline</strong> - Kubernetes Academy"
+
+#
+# Published Setting
+# Doc: https://gitpitch.com/docs/settings/published
+#
+published: true
+
+#
+# Highlight (Code) Setting
+# Doc: https://gitpitch.com/docs/settings/highlight
+#
+highlight: atom-one-dark
+
+#
+# Twitter Card Settings [Pro Only]
+# Doc: https://gitpitch.com/docs/settings/twitter-card
+#
+title: "Wizeline Kubernetes Academy"
+description: "Deploy and manage applications in containers"
