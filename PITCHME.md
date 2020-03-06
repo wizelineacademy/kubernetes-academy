@@ -9,3 +9,7 @@ Wizeline Academy
 ---?include=slides/setup/PITCHME.md
 ---?include=slides/lesson01/PITCHME.md
 ---?include=slides/lesson01/kubectl.md
+---?include=slides/lesson01/namespaces.md
+---?include=slides/lesson01/manifests.md
+---?include=slides/lesson01/pods.md
+---?include=slides/lesson01/deployments.md
