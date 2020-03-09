@@ -6,7 +6,6 @@ Wizeline Academy
 @css[text-black text-04](<br>_An introduction to Kubernetes_)
 @snapend
 
----?include=slides/setup/PITCHME.md
 ---?include=slides/lesson01/PITCHME.md
 ---?include=slides/lesson01/kubectl.md
 ---?include=slides/lesson01/namespaces.md
