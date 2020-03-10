@@ -1,27 +1,33 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend
-  labels:
-    app: backend
+  name: todo-backend-deployment
 spec:
-  replicas:
   selector:
     matchLabels:
+      app: todo-backend
+  replicas: 1 # tells deployment to run 2 pods matching the template
   template:
     metadata:
       labels:
+        app: todo-backend
     spec:
       containers:
-        - name:
-          image:
-          ports:
+      - name: todo-backend
+        image: wizelineacademy/todo-backend
+        ports:
+        - containerPort: 8000
+        env:
+        - name: MONGODB_PORT_27017_TCP_PORT
+          value: "27017"
+        - name: MONGODB_PORT_27017_TCP_ADDR
+          value: database ## service name
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: backend
+  name: todo-backend
 spec:
   type:
   selector:

@@ -1,27 +1,31 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend
-  labels:
-    app: frontend
+  name: todo-frontend-deployment
 spec:
-  replicas:
   selector:
     matchLabels:
+      app: todo-frontend
+  replicas: 1 # tells deployment to run 2 pods matching the template
   template:
     metadata:
       labels:
+        app: todo-frontend
     spec:
       containers:
-        - name:
-          image:
-          ports:
+      - name: todo-frontend
+        image: todo-frontend:env
+        ports:
+        - containerPort: 9090
+        env:
+            - name: API_URL
+              value: ### Need BACKEND public ENDPINT 
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: frontend
+  name: todo-frontend
 spec:
   type: NodePort
   selector:
