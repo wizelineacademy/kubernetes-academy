@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: todo-frontend
-        image: todo-frontend:env
+        image: wizelineacademy/todo-frontend:devmode
         ports:
         - containerPort: 9090
         env:
