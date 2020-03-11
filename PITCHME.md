@@ -12,3 +12,4 @@ Wizeline Academy
 ---?include=slides/lesson01/manifests.md
 ---?include=slides/lesson01/pods.md
 ---?include=slides/lesson01/deployments.md
+---?include=slides/lesson01/service.md
