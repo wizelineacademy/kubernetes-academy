@@ -38,6 +38,59 @@ $ kubectl create namespace service-lesson
 
 ---
 
+Before creating the service we first need some pods. We will use the previous deployment configuration.
+
+---
+
+@snap[north]
+
+#### lesson01/deployment-nginx.yaml
+
+@snapend
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deployment
+spec:
+  template:
+    metadata:
+      name: my-nginx
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: "nginx:latest"
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+```
+
+---
+
+@snap[north]
+
+#### Apply deployment-nginx.yaml
+
+@snapend
+
+```sh
+# Use the apply command to run a manifest file with the deployment
+$ kubectl -n service-lesson apply -f deployment-nginx.yaml
+
+# Verify your deployment is running
+$ kubectl -n service-lesson get deployments
+```
+
+---
+
+Now that we everything ready we will proceed with the creation of the service.
+
+---
+
 @snap[north]
 
 #### lesson01/service-nginx.yaml
@@ -56,13 +109,12 @@ spec:
   - protocol: TCP
     port: 80
     targetPort: 80
-    nodePort: 30080
-  type: NodePort
+  type: LoadBalancer
 ```
 
 @[1](Service object)
 @[6-7](Which pods make up the service)
-@[13](Service type)
+@[12](Service type)
 
 ---
 
