@@ -13,6 +13,20 @@ Pods can be created and destroyed for all kind of reasons. Instead of relying on
 
 @snap[north]
 
+#### Service Types
+
+@snapend
+
+- ClusterIP: Exposes the Service on a cluster-internal IP. Choosing this value makes the Service only reachable from within the cluster. This is the default ServiceType.
+
+- NodePort: Exposes the Service on each Node’s IP at a static port.
+
+- LoadBalancer: Exposes the Service externally using a cloud provider’s load balancer.
+
+---
+
+@snap[north]
+
 #### Create a new namespace to keep everything neat
 
 @snapend
@@ -65,5 +79,3 @@ $ kubectl -n service-lesson apply -f service-nginx.yaml
 # Verify your service is running
 $ kubectl -n service-lesson get service
 ```
-
----
