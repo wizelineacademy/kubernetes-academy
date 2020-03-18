@@ -146,4 +146,4 @@ my-service   LoadBalancer   10.0.5.149   35.232.227.252   80:31113/TCP   33s
 ```
 @[2](Create service)
 @[5](Verify service was created)
-@[11](Wait for ExternalIP to be ready)
+@[9-11](Wait for ExternalIP to be ready)
