@@ -35,6 +35,7 @@ Pods can be created and destroyed for all kind of reasons. Instead of relying on
 # We will use this namespace during this lesson
 $ kubectl create namespace service-lesson
 ```
+@[2](Create namespace)
 
 ---
 
@@ -87,7 +88,8 @@ $ kubectl -n service-lesson get deployments
 NAME            READY   UP-TO-DATE   AVAILABLE   AGE
 my-deployment   3/3     3            3           11s
 ```
-
+@[2](Create deployment)
+@[2](Verify deployment is running)
 @[8](Deployment ready)
 
 ---
@@ -137,10 +139,11 @@ $ kubectl -n service-lesson apply -f service-nginx.yaml
 $ kubectl get services --watch -n service-lesson
 
 # Wait until you see an external IP address, once it's ready
-# paste on your browser
+# paste it on your browser
 NAME         TYPE           CLUSTER-IP   EXTERNAL-IP      PORT(S)        AGE
 my-service   LoadBalancer   10.0.5.149   <pending>        80:31113/TCP   19s
 my-service   LoadBalancer   10.0.5.149   35.232.227.252   80:31113/TCP   33s
 ```
-
-@[9](External  IP ready)
+@[2](Create service)
+@[4](Verify service was created)
+@[9](Wait for ExternalIP to be ready)
