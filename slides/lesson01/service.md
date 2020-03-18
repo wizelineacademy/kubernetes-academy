@@ -5,9 +5,9 @@
 
 ---
 
-Services allow to dynamically access a group of replica pods. 
+Services allow to dynamically access a group of replica pods.
 
-Pods can be created and destroyed for all kind of reasons. Instead of relying on Pod IP addresses which change, Kubernetes provides a Service which is an abstraction layer for communicating with pods. Communication to the Service will provide access to whatever replicas are up at the time. 
+Pods can be created and destroyed for all kind of reasons. Instead of relying on Pod IP addresses which change, Kubernetes provides a Service which is an abstraction layer for communicating with pods. Communication to the Service will provide access to whatever replicas are up at the time.
 
 ---
 
@@ -83,6 +83,9 @@ $ kubectl -n service-lesson apply -f deployment-nginx.yaml
 
 # Verify your deployment is running
 $ kubectl -n service-lesson get deployments
+
+NAME            READY   UP-TO-DATE   AVAILABLE   AGE
+my-deployment   3/3     3            3           11s
 ```
 
 ---
@@ -129,5 +132,10 @@ spec:
 $ kubectl -n service-lesson apply -f service-nginx.yaml
 
 # Verify your service is running
-$ kubectl -n service-lesson get service
+$ kubectl get services --watch -n service-lesson
+
+# Wait until you see an external IP address, once it's ready paste on your browser
+NAME         TYPE           CLUSTER-IP   EXTERNAL-IP      PORT(S)        AGE
+my-service   LoadBalancer   10.0.5.149   <pending>        80:31113/TCP   19s
+my-service   LoadBalancer   10.0.5.149   35.232.227.252   80:31113/TCP   33s
 ```
