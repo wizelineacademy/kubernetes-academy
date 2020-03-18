@@ -89,7 +89,7 @@ NAME            READY   UP-TO-DATE   AVAILABLE   AGE
 my-deployment   3/3     3            3           11s
 ```
 @[2](Create deployment)
-@[4](Verify deployment is running)
+@[5](Verify deployment is running)
 @[8](Deployment ready)
 
 ---
