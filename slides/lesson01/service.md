@@ -88,6 +88,8 @@ NAME            READY   UP-TO-DATE   AVAILABLE   AGE
 my-deployment   3/3     3            3           11s
 ```
 
+@[8](Deployment ready)
+
 ---
 
 Now that we everything ready we will proceed with the creation of the service.
@@ -134,8 +136,11 @@ $ kubectl -n service-lesson apply -f service-nginx.yaml
 # Verify your service is running
 $ kubectl get services --watch -n service-lesson
 
-# Wait until you see an external IP address, once it's ready paste on your browser
+# Wait until you see an external IP address, once it's ready
+# paste on your browser
 NAME         TYPE           CLUSTER-IP   EXTERNAL-IP      PORT(S)        AGE
 my-service   LoadBalancer   10.0.5.149   <pending>        80:31113/TCP   19s
 my-service   LoadBalancer   10.0.5.149   35.232.227.252   80:31113/TCP   33s
 ```
+
+@[9](External  IP ready)
