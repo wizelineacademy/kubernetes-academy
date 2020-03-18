@@ -145,5 +145,5 @@ my-service   LoadBalancer   10.0.5.149   <pending>        80:31113/TCP   19s
 my-service   LoadBalancer   10.0.5.149   35.232.227.252   80:31113/TCP   33s
 ```
 @[2](Create service)
-@[4](Verify service was created)
-@[9](Wait for ExternalIP to be ready)
+@[5](Verify service was created)
+@[11](Wait for ExternalIP to be ready)
