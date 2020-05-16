@@ -55,6 +55,47 @@ $ kubectl describe pod nginx-pod
 $ kubectl delete pod nginx-pod
 ```
 
+# Labels
+
+```yaml
+# Pod manifest file nginx-pod-2.yaml in which we put two labels
+# If using Vim type ":set paste" before pasting this
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod-2
+  labels:
+    env: development
+    owner: your-name
+spec:
+  containers:
+  - name: nginx
+    image: nginx:latest
+    ports:
+    - containerPort: 8081
+
+```
+
+```bash
+# Show the pods labels
+kubectl get pods --show-labels
+
+# Add a label to the pod
+kubectl label pods pod-name owner=your-name
+
+# To use a label for filtering we can use the --selector option
+kubectl get pods --selector owner=your-name
+
+# The --selector option can be abbreviated to -l
+kubectl get pods -l owner=your-name
+
+# List all pods that are either labelled with env=development or with env=production
+kubectl get pods -l 'env in (production, development)'
+
+# Other verbs also support label selection, like delete
+kubectl delete pods -l 'env in (production, development)'
+```
+
 # ReplicaSets
 
 ```yaml
@@ -225,4 +266,53 @@ spec:
   type: LoadBalancer
   selector:
     app: nginx
+```
+
+# Namespaces
+
+```yaml
+# Namespace manifest file nginx-namespace-dev.yaml
+# If using Vim type ":set paste" before pasting this
+{
+  "apiVersion": "v1",
+  "kind": "Namespace",
+  "metadata": {
+    "name": "development",
+    "labels": {
+      "name": "development"
+    }
+  }
+}
+```
+
+```yaml
+# Namespace manifest file nginx-namespace-prod.yaml
+# If using Vim type ":set paste" before pasting this
+{
+  "apiVersion": "v1",
+  "kind": "Namespace",
+  "metadata": {
+    "name": "production",
+    "labels": {
+      "name": "production"
+    }
+  }
+}
+```
+
+```bash
+# List namespaces
+$ kubectl get namespaces
+
+# List namespaces and their labels
+$ kubectl get namespaces --show-labels
+
+# Create a pod in namespace 'dev'
+kubectl run --generator=run-pod/v1 nginx-pod-dev --image=nginx:latest --namespace=dev
+
+# Get pods in the namespace 'dev'
+kubectl get pods -n dev
+
+# Delete a pod located in a specific namespace
+kubectl delete pod -n your-namespace 
 ```
