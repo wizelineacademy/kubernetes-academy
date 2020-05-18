@@ -273,31 +273,23 @@ spec:
 ```yaml
 # Namespace manifest file nginx-namespace-dev.yaml
 # If using Vim type ":set paste" before pasting this
-{
-  "apiVersion": "v1",
-  "kind": "Namespace",
-  "metadata": {
-    "name": "development",
-    "labels": {
-      "name": "development"
-    }
-  }
-}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: development
+  labels:
+    name: development
 ```
 
 ```yaml
 # Namespace manifest file nginx-namespace-prod.yaml
 # If using Vim type ":set paste" before pasting this
-{
-  "apiVersion": "v1",
-  "kind": "Namespace",
-  "metadata": {
-    "name": "production",
-    "labels": {
-      "name": "production"
-    }
-  }
-}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+  labels:
+    name: production
 ```
 
 ```bash
