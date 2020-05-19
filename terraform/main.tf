@@ -1,3 +1,10 @@
+terraform {
+  backend "gcs" {
+    bucket  = "academy-infra"
+    prefix  = "terraform/state"
+  }
+}
+
 resource "google_compute_network" "academy-vpc" {
   name                    = var.vpc_name
   auto_create_subnetworks = false
@@ -37,4 +44,17 @@ resource "google_project_iam_member" "academy_group_k8s_developer" {
   project = var.project_id
   role    = "roles/container.developer"
   member  = "group:${var.academy_google_group}"
+}
+
+resource "google_compute_firewall" "gke-academy-nodes" {
+  project = var.project_id
+  name    = "gke-academy-nodes-services"
+  network = google_compute_network.academy-vpc.name
+  allow {
+    protocol = "tcp"
+    ports    = ["30000-32767"]
+  }
+  description   = "Allows k8s services of type NodePort to be reachable from the internet."
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["gke-gke-academy-1"]
 }

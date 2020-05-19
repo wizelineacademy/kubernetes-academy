@@ -1,7 +1,12 @@
+# Preparation
+
+1. Visit the GCP Console by following [this link](https://console.cloud.google.com/kubernetes/list?folder=&organizationId=&project=wizeline-academy-k8s-36bd66a7).
+2. Log in using the Google Account that you provided on the Wizeline Academy registration form.
+3. Open the Google Cloud Shell.
+
 # Connecting to a GKE Cluster
 
 ```bash
-$ gcloud config set compute/region us-central1
 $ gcloud container clusters get-credentials gke-academy-1 --region=us-central1
 $ gcloud container clusters list --region=us-central1
 ```
@@ -19,12 +24,20 @@ $ kubectl get nodes
 # Create a single pod
 $ kubectl run --generator=run-pod/v1 nginx-pod --image=nginx:latest
 
+# List the pods
+$ kubectl get pods
+
+# Describe your pod
+$ kubectl describe pod nginx-pod
+
 # Delete the pod
 $ kubectl delete pod nginx-pod
 ```
 
+## Create a Pod using a manifest file
+
 ```yaml
-# Pod manifest file nginx-pod.yaml
+# Save this to a file named nginx-pod.yaml
 # If using Vim type ":set paste" before pasting this
 apiVersion: v1
 kind: Pod
@@ -39,61 +52,12 @@ spec:
 ```bash
 # Create a pod using the manifest file
 $ kubectl create -f nginx-pod.yaml
-```
-
-```bash
-# List pods
-$ kubectl get pods
 
 # List pods with detailed information
 $ kubectl get pods -o wide
 
-# Describe the Pod
-$ kubectl describe pod nginx-pod
-
 # Delete the pod
 $ kubectl delete pod nginx-pod
-```
-
-# Labels
-
-```yaml
-# Pod manifest file nginx-pod-2.yaml in which we put two labels
-# If using Vim type ":set paste" before pasting this
-apiVersion: v1
-kind: Pod
-metadata:
-  name: nginx-pod-2
-  labels:
-    env: development
-    owner: your-name
-spec:
-  containers:
-  - name: nginx
-    image: nginx:latest
-    ports:
-    - containerPort: 8081
-
-```
-
-```bash
-# Show the pods labels
-kubectl get pods --show-labels
-
-# Add a label to the pod
-kubectl label pods pod-name owner=your-name
-
-# To use a label for filtering we can use the --selector option
-kubectl get pods --selector owner=your-name
-
-# The --selector option can be abbreviated to -l
-kubectl get pods -l owner=your-name
-
-# List all pods that are either labelled with env=development or with env=production
-kubectl get pods -l 'env in (production, development)'
-
-# Other verbs also support label selection, like delete
-kubectl delete pods -l 'env in (production, development)'
 ```
 
 # ReplicaSets
@@ -134,17 +98,17 @@ $ kubectl get replicasets
 $ kubectl get pods -l tier=frontend
 
 # Scale the number of pods
-$ kubectl scale rs/nginx --replicas=5
+$ kubectl scale rs/nginx-rs --replicas=5
 
 # List the pods from the replica set
 $ kubectl get pods -l tier=frontend
 
 # Update the ReplicaSet Image
-$ kubectl set image rs/nginx app=nginx:1.7
+$ kubectl set image rs/nginx-rs app=nginx:latest
 
 # Describe the replica set
 # And notice how the container image has been updated
-$ kubectl describe rs nginx
+$ kubectl describe rs nginx-rs
 
 # List the pods from the replica set
 # Notice how the pods weren't restarted
@@ -152,20 +116,24 @@ $ kubectl get pods -l tier=frontend
 
 # Describe one of the pods
 # Notice how it is using the old image
-$ kubectl describe pod nginx-<hash>
+$ kubectl describe pod nginx-rs-<hash>
 
 # Delete the pod
 # A new pod will be created
-$ kubectl delete pod nginx-<hash>
+$ kubectl delete pod nginx-rs-<hash>
+
+# List the pods from the replica set
+# Notice how we have a new pod
+$ kubectl get pods -l tier=frontend
 
 # Describe the new pod
 # Notice how it is using the new image
-$ kubectl describe pod nginx-<hash>
+$ kubectl describe pod nginx-rs-<hash>
 
 # The old pods will keep using the old image
 
 # Delete the replicaset
-$ kubectl delete rs nginx
+$ kubectl delete rs nginx-rs
 ```
 
 # Deployments
@@ -176,7 +144,7 @@ $ kubectl delete rs nginx
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx
+  name: nginx-deployment
 spec:
   replicas: 3
   selector:
@@ -207,7 +175,7 @@ $ kubectl get pods -l app=nginx
 $ kubectl get replicasets
 
 # Scale up the deployment
-$ kubectl scale deployment nginx --replicas=5
+$ kubectl scale deployment nginx-deployment --replicas=5
 
 # See the pods deployed
 $ kubectl get pods -l app=nginx
@@ -216,7 +184,7 @@ $ kubectl get pods -l app=nginx
 $ kubectl get replicasets
 
 # Rollout a new version
-$ kubectl set image deployment nginx app=nginx:latest --record
+$ kubectl set image deployment nginx-deployment app=nginx:latest --record
 
 # Inspect the pods
 $ kubectl get pods -l app=nginx
@@ -225,13 +193,13 @@ $ kubectl get pods -l app=nginx
 $ kubectl get replicasets
 
 # Restore the old version
-$ kubectl rollout undo deployment nginx --record
+$ kubectl rollout undo deployment nginx-deployment
 
 # List the replicasets
 $ kubectl get replicasets
 
 # See the deployment history
-$ kubectl rollout history deployment nginx
+$ kubectl rollout history deployment nginx-deployment
 ```
 
 # Services
@@ -241,34 +209,70 @@ $ kubectl rollout history deployment nginx
 $ kubectl get services
 
 # Expose the deployment to the internet
-$ kubectl expose deployment nginx --port=80 --target-port=80 --type=LoadBalancer
+$ kubectl expose deployment nginx-deployment --port=80 --target-port=80 --type=NodePort
 
 # The above command will create a service
-# Wait for its EXTERNAL-IP to be published
+# Take note of the random port it's using
 $ kubectl get services
 
-# Once ready you can visit http://<EXTERNAL-IP>
+# The service is exposed on a random port on the nodes
+# Get one of the nodes IP
+$ kubectl get nodes -o wide
+
+# Once ready you can visit http://<NODE-EXTERNAL-IP>:<RANDOM-PORT>
 # Inspect the Headers
 
 # Delete the service
-$ kubectl delete service nginx
+$ kubectl delete service nginx-deployment
 ```
+
+## Using a manifest to create the service
 
 ```yaml
 # Service manifest file nginx-service.yaml
 # If using Vim type ":set paste" before pasting this
+apiVersion: v1
 kind: Service
 metadata:
-  labels:
-    app: nginx
   name: nginx-service
 spec:
-  type: LoadBalancer
+  type: NodePort
   selector:
     app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+```
+
+```bash
+# Create the NodePort service
+$ kubectl apply -f nginx-service.yaml
+
+# The above command will create a service
+# Take note of the random port it's using
+$ kubectl get services
+
+# The service is exposed on a random port on the nodes
+# Get one of the nodes IP
+$ kubectl get nodes -o wide
+
+# Once ready you can visit http://<NODE-EXTERNAL-IP>:<RANDOM-PORT>
+# Inspect the Headers
+
+# Delete the service
+$ kubectl delete service nginx-service
 ```
 
 # Namespaces
+
+```bash
+$ kubectl get namespaces
+
+$ kubectl create namespace my-namespace
+
+$ kubectl run --generator=run-pod/v1 nginx --image=nginx:latest -n my-namespace
+```
 
 ```yaml
 # Namespace manifest file nginx-namespace-dev.yaml
@@ -307,4 +311,44 @@ kubectl get pods -n dev
 
 # Delete a pod located in a specific namespace
 kubectl delete pod -n your-namespace 
+```
+
+# Labels
+
+```yaml
+# Pod manifest file nginx-pod-2.yaml in which we put two labels
+# If using Vim type ":set paste" before pasting this
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod-2
+  labels:
+    env: development
+    owner: your-name
+spec:
+  containers:
+  - name: nginx
+    image: nginx:latest
+    ports:
+    - containerPort: 8081
+```
+
+```bash
+# Show the pods labels
+kubectl get pods --show-labels
+
+# Add a label to the pod
+kubectl label pods pod-name owner=your-name
+
+# To use a label for filtering we can use the --selector option
+kubectl get pods --selector owner=your-name
+
+# The --selector option can be abbreviated to -l
+kubectl get pods -l owner=your-name
+
+# List all pods that are either labelled with env=development or with env=production
+kubectl get pods -l 'env in (production, development)'
+
+# Other verbs also support label selection, like delete
+kubectl delete pods -l 'env in (production, development)'
 ```
