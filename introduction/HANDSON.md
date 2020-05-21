@@ -374,12 +374,6 @@ kubectl delete pods -l 'env in (production, development)'
 
 # Clean up
 
-Delete your namespace:
-
-```bash
-kubectl delete namespace <firstName-lastName>
-```
-
 Type `exit` on your *Cloud Shell* session.
 
 Close your incognito browser window.
