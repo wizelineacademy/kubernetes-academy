@@ -28,6 +28,8 @@ docker push gcr.io/<project_name>/<preffered-image-name>
 kubectl apply -f mysql-cronjob.yaml
 ```
 
+NOTE: This cronjob is activated every 10 mins
+
 ### References:
 
 https://medium.com/searce/cronjob-to-backup-mysql-on-gke-23bb706d9bbf
