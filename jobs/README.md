@@ -2,7 +2,7 @@
 
 * Connect to the cluster
 
-* Encrypt the user, for example: echo -n 'root' | base64
+* Encrypt the password, for example: echo -n 'password' | base64
 
 * Copy output from the command above and save it into mysql-secret.yaml
 
