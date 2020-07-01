@@ -5,6 +5,7 @@
 * **[Namespaces](#namespaces)**
   * **[Your own namespace](#important-create-your-own-namespace)**
 * **[Persisting Data](#persisting-data)**
+* **[Health Checks](#health-checks)**
 
 # Preparation
 
