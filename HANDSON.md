@@ -65,37 +65,188 @@ world scenarios is to separate application environments, like
 
 # Persisting Data
 
-## Create the Pod manifest file
+For this example we have a basic application in Wordpress with its database over MySQL.
+We're going to use offical MySQL and Wodpress docker images from DockerHub.
 
-Google Cloud Shell Editor can be used to easily create the file.
+So, first we need to deploy MySQL database over our K8s with the next **svc** and **deployment** configuration.
+
+## MySQL deployment
+
+This is a basic deployment and service k8s configuration
 
 ```yaml
-# Using the Google Cloud Shell Editor
-# Create the file nginx-pod.yaml
+# This is the service
 apiVersion: v1
-kind: Pod
+kind: Service
 metadata:
-  name: nginx-pod
+  name: wordpress-mysql
+  labels:
+    app: wordpress
 spec:
-  containers:
-  - name: nginx
-    image: nginx:latest
+  ports:
+    - port: 3306
+  selector:
+    app: wordpress
+    tier: mysql
+  clusterIP: None
+---
+# This is the deployment
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: wordpress-mysql
+  labels:
+    app: wordpress
+spec:
+  selector:
+    matchLabels:
+      app: wordpress
+      tier: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        tier: mysql
+    spec:
+      containers:
+      - image: mysql:5.6
+        name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: root
+        ports:
+        - containerPort: 3306
+          name: mysql
 ```
+## Wordpress application deployment
+Then, we're going to deploy wordpress application.
+You would notice that for wordpress deployment we're going to use a **LoadBalancer** service kind instead of ClusterIP service.
+And we're going to use the name of database service such database host name.
 
-```bash
-# Create the pod using the manifest file
-kubectl create -f nginx-pod.yaml
-
-# List pods
-kubectl get pods
-
-# See the pod's detailed information
-kubectl describe pod nginx-pod
-
-# Delete the pod
-kubectl delete pod nginx-pod
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress
+  labels:
+    app: wordpress
+spec:
+  ports:
+    - port: 80
+  selector:
+    app: wordpress
+    tier: frontend
+  type: LoadBalancer
+---
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: wordpress
+  labels:
+    app: wordpress
+spec:
+  selector:
+    matchLabels:
+      app: wordpress
+      tier: frontend
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        tier: frontend
+    spec:
+      containers:
+      - image: wordpress:4.8-apache
+        name: wordpress
+        env:
+        - name: WORDPRESS_DB_HOST
+          value: wordpress-mysql
+        - name: WORDPRESS_DB_PASSWORD
+          value: root
+        ports:
+        - containerPort: 80
+          name: wordpress
 ```
+### Test wordpress
 
+In order to test we have to:
+* set the initial configuration for wordpress
+* Then we have to create a new entry to the blog and show to audience
+* Destroy database and wordpress pods
+What happend if we visit wordpress URL again?. Content in database was flush and entry doesn't exist now
+
+## Using PVC to store data with MySQL
+
+For store data across pods we're going to use a **persistentVolume** and it will be use with a **persistentVolumeClaim** in our wordpress pod
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress-mysql
+  labels:
+    app: wordpress
+spec:
+  ports:
+    - port: 3306
+  selector:
+    app: wordpress
+    tier: mysql
+  clusterIP: None
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+  labels:
+    app: wordpress
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: wordpress-mysql
+  labels:
+    app: wordpress
+spec:
+  selector:
+    matchLabels:
+      app: wordpress
+      tier: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        tier: mysql
+    spec:
+      containers:
+      - image: mysql:5.6
+        name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: root
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim
+```
 
 # Health Checks
 ```bash
