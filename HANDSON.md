@@ -105,6 +105,22 @@ kubectl delete pod nginx-pod
 kubectl create namespace health-check
 ```
 
+## Secrets
+
+```bash
+# Create user mysql secret to health check files
+kubectl create secret generic user-secret --from-literal=mysql-user='root' -n health-check
+
+# Create password mysql secret to health check files
+kubectl create secret generic password-secret --from-literal=mysql-root-password='root' -n health-check
+
+# Delete user mysql secrets
+kubectl delete secret user-secret -n health-check
+
+# Delete password mysql secrets
+kubectl delete secret password-secret -n health-check
+```
+
 ## Liveness
 
 [mysql-liveness.yaml](lesson02/mysql-liveness.yaml)

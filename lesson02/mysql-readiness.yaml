@@ -31,12 +31,11 @@ spec:
 apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
 kind: Deployment
 metadata:
-  name: wordpress-mysql
+  name: wordpress-mysql-readiness
   labels:
     app: wordpress
   namespace: health-check
 spec:
-  replicas: 2
   selector:
     matchLabels:
       app: wordpress
@@ -53,8 +52,16 @@ spec:
       - image: mysql:5.6
         name: mysql
         env:
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: user-secret
+              key: mysql-user
         - name: MYSQL_ROOT_PASSWORD
-          value: root
+          valueFrom:
+            secretKeyRef:
+              name: password-secret
+              key: mysql-root-password
         ports:
         - containerPort: 3306
           name: mysql
@@ -63,8 +70,11 @@ spec:
           mountPath: /var/lib/mysql
         readinessProbe:
           exec:
-            # Check we can execute queries over TCP (skip-networking is off).
-            command: ["mysqladmin", "status", "-uroot", "-proot"]
+            command:
+              - bash 
+              - "-c" 
+              - | 
+                mysqladmin status -u$MYSQL_USER -p$MYSQL_ROOT_PASSWORD
           initialDelaySeconds: 15
           periodSeconds: 2
           timeoutSeconds: 1

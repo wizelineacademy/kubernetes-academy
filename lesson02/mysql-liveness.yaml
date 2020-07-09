@@ -31,7 +31,7 @@ spec:
 apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
 kind: Deployment
 metadata:
-  name: wordpress-mysql
+  name: wordpress-mysql-liveness
   labels:
     app: wordpress
   namespace: health-check
@@ -52,8 +52,16 @@ spec:
       - image: mysql:5.6
         name: mysql
         env:
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: user-secret
+              key: mysql-user
         - name: MYSQL_ROOT_PASSWORD
-          value: root
+          valueFrom:
+            secretKeyRef:
+              name: password-secret
+              key: mysql-root-password
         ports:
         - containerPort: 3306
           name: mysql
