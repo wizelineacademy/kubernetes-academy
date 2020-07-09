@@ -121,7 +121,7 @@ kubectl delete secret password-secret -n health-check
 
 ## Liveness
 
-[mysql-liveness.yaml](lesson02/mysql-liveness.yaml)
+[mysql-liveness.yaml](lesson02_health_checks/mysql-liveness.yaml)
 
 ```bash
 # Apply liveness yaml file
@@ -137,7 +137,7 @@ kubectl describe pod wordpress-mysql-liveness-<id> -n health-check
 ### Events output
 
 No problem with the pod.
-![Events Output](lesson02/k8s_pod_event_1.png)
+![Events Output](lesson02_health_checks/k8s_pod_event_1.png)
 
 ```bash
 # Break the liveness probe
@@ -147,7 +147,7 @@ kubectl exec -n health-check wordpress-mysql-liveness-<id> -c mysql -- mv /usr/b
 ### Events output
 
 Liveness probe failed and restart the mysql container.
-![Events Output](lesson02/k8s_pod_event_2.png)
+![Events Output](lesson02_health_checks/k8s_pod_event_2.png)
 
 ```bash
 # Validate health-check
@@ -158,7 +158,7 @@ kubectl delete -f mysql-liveness.yaml
 
 ## Readiness
 
-[mysql-readiness.yaml](lesson02/mysql-readiness.yaml)
+[mysql-readiness.yaml](lesson02_health_checks/mysql-readiness.yaml)
 
 ```bash
 # Apply readiness yaml file
@@ -174,7 +174,7 @@ kubectl describe pod wordpress-mysql-readiness-<id> -n health-check
 ### Events output
 
 No problem with the pod.
-![Events Output](lesson02/k8s_pod_event_3.png)
+![Events Output](lesson02_health_checks/k8s_pod_event_3.png)
 
 
 ```bash
@@ -185,7 +185,7 @@ kubectl exec -n health-check wordpress-mysql-readiness-<id> -c mysql -- mv /usr/
 ### Events output
 
 Readiness probe failed.
-![Events Output](lesson02/k8s_pod_event_4.png)
+![Events Output](lesson02_health_checks/k8s_pod_event_4.png)
 
 ```bash
 # Repair the readiness probe
