@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: result
+  name: result
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: result
+  template:
+    metadata:
+      labels:
+        app: result
+    spec:
+      containers:
+      - image: gcr.io/wizeline-academy-k8s-36bd66a7/result-app:1
+        name: result
+        ports:
+        - containerPort: 80
+          name: result
