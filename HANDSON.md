@@ -105,6 +105,173 @@ kubectl delete pod nginx-pod
 .
 .
 
+
+# Daemonset
+
+## First we are going to create a namespace for everything related to monitoring
+```yaml
+# monitor-ns.yml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+```
+```bash
+# Create the namespace
+kubectl apply -f nginx-pod.yaml
+```
+## Then we create the Daemonset manifest file
+
+```yaml
+# node-exporter.yaml
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: monitoring
+  labels:
+    app: node-exporter
+spec:
+  selector:
+    matchLabels:
+      app: node-exporter
+  template:
+    metadata:
+      labels:
+        app: node-exporter
+        name: node-exporter
+      annotations:
+         prometheus.io/scrape: "true"
+         prometheus.io/port: "9100"
+    spec: 
+      hostPID: true
+      hostIPC: true
+      hostNetwork: true
+      containers:
+        - ports:
+            - containerPort: 9100
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 0.15
+          securityContext:
+            privileged: true
+          image: prom/node-exporter:v1.0.1
+          args:
+            - --path.procfs
+            - /host/proc
+            - --path.sysfs
+            - /host/sys
+            - --collector.filesystem.ignored-mount-points
+            - '"^/(sys|proc|dev|host|etc)($|/)"'
+          name: node-exporter
+          volumeMounts:
+            - name: dev
+              mountPath: /host/dev
+            - name: proc
+              mountPath: /host/proc
+            - name: sys
+              mountPath: /host/sys
+            - name: rootfs
+              mountPath: /rootfs
+      volumes:
+        - name: proc
+          hostPath:
+            path: /proc
+        - name: dev
+          hostPath:
+            path: /dev
+        - name: sys
+          hostPath:
+            path: /sys
+        - name: rootfs
+          hostPath:
+            path: /
+```
+```bash
+# Create the daemonset
+kubectl apply -f node-exporter.yaml
+```
+## The prometheus server requires a config file to know what are the resources that is going to monitor
+```yaml
+global:
+  scrape_interval:     15s
+
+# A scrape configuration containing exactly one endpoint to scrape:
+# Here it's Prometheus itself.
+scrape_configs:
+
+  - job_name: 'node'
+
+    # Override the global default and scrape targets from this job every 5 seconds.
+    scrape_interval: 5s
+
+    dns_sd_configs:
+      - names:
+        - node-exporter.monitoring.svc.cluster.local
+        type: A
+        port: 9100
+```
+
+## The way we pass this config file to the prometheus pod is through a configMap
+```bash
+# Creating Configmap from file
+kubectl create configmap prometheus-example-cm --from-file=prometheus.yml
+```
+
+## Then we create a deployment for the prometheus server which will collect and display the metrics of each node and the service that will expose the server
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-deployment
+  namespace: monitoring
+  labels:
+    app: prometheus
+    purpose: example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+      purpose: example
+  template:
+    metadata:
+      labels:
+        app: prometheus
+        purpose: example
+    spec:
+      containers:
+      - name: prometheus-example
+        image: prom/prometheus
+        volumeMounts:
+          - name: config-volume
+            mountPath: /etc/prometheus/prometheus.yml
+            subPath: prometheus.yml
+        ports:
+        - containerPort: 9090
+      volumes:
+        - name: config-volume
+          configMap:
+           name: prometheus-example-cm # Here we use the configmap previously defined and it will be mount inside the container
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: prometheus-example-service
+  namespace: monitoring
+spec:
+  selector:
+    app: prometheus
+    purpose: example
+  ports:
+  - name: promui
+    protocol: TCP
+    port: 9090
+    targetPort: 9090
+  type: LoadBalancer
+```
+
 # Ingress
 
 The students will create an ingress to access two different applications through the same load balancer. This resource can help us saving money on load balancers and SSL certificates, as well as reducing management overhead.
@@ -450,6 +617,7 @@ spec:
 ```
 
 Now try to access the app again. It should be working as expected.
+
 
 # Clean up
 
