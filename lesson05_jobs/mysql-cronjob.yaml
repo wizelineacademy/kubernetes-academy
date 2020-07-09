@@ -1,0 +1,36 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: mysql-backup
+spec:
+  schedule: "*/10 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: mysql-backup
+              image: gcr.io/<project_name>/<prefered-image-name>
+              env:
+                - name: GOOGLE_PROJECT
+                  value: <google-project>
+                - name: DB_HOST
+                  value: wordpress-mysql
+                - name: DB_USER
+                  value: root
+                - name: DB_NAME
+                  value: mysql
+                - name: DB_PASS
+                  valueFrom:
+                    secretKeyRef:
+                      name: mysecret
+                      key: password
+                - name: GCS_BUCKET
+                  value: <my-bucket>
+                - name: GCS_SA
+                  value: service-account.json
+              args:
+                - /bin/bash
+                - -c
+                - mysqldump --user="${DB_USER}" --password="${DB_PASS}" --host="${DB_HOST}" "$@" "${DB_NAME}" > "${DB_NAME}-$(date '+%d|%m|%Y-%H:%M:%S')".sql; gcloud config set project ${GOOGLE_PROJECT}; gcloud auth activate-service-account --key-file "${GCS_SA}"; gsutil cp *.sql gs://"${GCS_BUCKET}"
