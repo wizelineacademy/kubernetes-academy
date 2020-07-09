@@ -106,6 +106,160 @@ kubectl delete pod nginx-pod
 .
 
 
+# Resource Management
+Now, we're going to define CPU and Memory requests and limits for our MySQL and Wordpress pods.
+
+- You will be adding the following `resources` section on each deployment. This section will add `requests` and `limits` resource management values.
+
+```
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "250m"
+  limits:
+    memory: "128Mi"
+    cpu: "500m"
+```
+
+- With the following commands you will apply the proper changes into your deployments.
+
+**MySQL Deployment**
+```
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: wordpress-mysql
+  labels:
+    app: wordpress
+spec:
+  selector:
+    matchLabels:
+      app: wordpress
+      tier: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        tier: mysql
+    spec:
+      containers:
+      - image: mysql:5.6
+        name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: root
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim
+EOF
+```
+
+**Wordpress Deployment**
+```
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: wordpress
+  labels:
+    app: wordpress
+spec:
+  selector:
+    matchLabels:
+      app: wordpress
+      tier: frontend
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        tier: frontend
+    spec:
+      containers:
+      - image: wordpress:4.8-apache
+        name: wordpress
+        env:
+        - name: WORDPRESS_DB_HOST
+          value: wordpress-mysql
+        - name: WORDPRESS_DB_PASSWORD
+          value: root
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 80
+          name: wordpress
+        volumeMounts:
+        - name: wordpress-persistent-storage
+          mountPath: /var/www/html
+      volumes:
+      - name: wordpress-persistent-storage
+        persistentVolumeClaim:
+          claimName: wp-pv-claim
+EOF
+```
+
+- Finally, verify that `requests` and `limits` have been applied.
+```
+# Using jq output manipulation
+kubectl get pods -o json --selector=app=wordpress| jq '.items[].spec.containers[].resources'
+
+# Without jq
+kubectl get pods  --selector=app=wordpress  -o=custom-columns='Container:spec.containers[*].name,Requests:spec.containers[*].resources.requests,Limits:spec.containers[*].resources.limits'
+```
+**Output with [jq](https://stedolan.github.io/jq/)**
+```
+{
+  "limits": {
+    "cpu": "500m",
+    "memory": "128Mi"
+  },
+  "requests": {
+    "cpu": "250m",
+    "memory": "64Mi"
+  }
+}
+{
+  "limits": {
+    "cpu": "500m",
+    "memory": "128Mi"
+  },
+  "requests": {
+    "cpu": "250m",
+    "memory": "64Mi"
+  }
+}
+```
+
+**Output without jq**
+```
+Container   Requests                    Limits
+wordpress   map[cpu:250m memory:64Mi]   map[cpu:500m memory:128Mi]
+mysql       map[cpu:250m memory:64Mi]   map[cpu:500m memory:128Mi]
+```
+
 # Daemonset
 
 ## First we are going to create a namespace for everything related to monitoring
