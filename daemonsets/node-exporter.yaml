@@ -1,8 +1,7 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: node-exporter
-  namespace: monitoring
   labels:
     app: node-exporter
 spec:
@@ -65,7 +64,6 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  namespace: monitoring
   annotations:
     prometheus.io/scrape: 'true'
   labels:

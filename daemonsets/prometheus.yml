@@ -12,7 +12,7 @@ scrape_configs:
 
     dns_sd_configs:
       - names:
-        - node-exporter.monitoring.svc.cluster.local
+        - node-exporter.<firstName-lastName>.svc.cluster.local
         type: A
         port: 9100
 

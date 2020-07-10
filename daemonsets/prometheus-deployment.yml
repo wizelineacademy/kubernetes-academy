@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: prometheus-deployment
-  namespace: monitoring
   labels:
     app: prometheus
     purpose: example
@@ -36,7 +35,6 @@ kind: Service
 apiVersion: v1
 metadata:
   name: prometheus-example-service
-  namespace: monitoring
 spec:
   selector:
     app: prometheus
@@ -46,4 +44,4 @@ spec:
     protocol: TCP
     port: 9090
     targetPort: 9090
-  type: LoadBalancer
+  type: NodePort

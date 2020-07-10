@@ -98,27 +98,14 @@ kubectl delete pod nginx-pod
 
 # Daemonset
 
-## First we are going to create a namespace for everything related to monitoring
-```yaml
-# monitor-ns.yml
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: monitoring
-```
-```bash
-# Create the namespace
-kubectl apply -f nginx-pod.yaml
-```
-## Then we create the Daemonset manifest file
+## First we create the Daemonset manifest file
 
 ```yaml
 # node-exporter.yaml
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: node-exporter
-  namespace: monitoring
   labels:
     app: node-exporter
 spec:
@@ -177,6 +164,24 @@ spec:
         - name: rootfs
           hostPath:
             path: /
+---
+kind: Service
+apiVersion: v1
+metadata:
+  annotations:
+    prometheus.io/scrape: 'true'
+  labels:
+    name: node-exporter
+  name: node-exporter
+spec:
+  clusterIP: None
+  ports:
+  - name: scrape
+    port: 9100
+    targetPort: 9100
+    protocol: TCP
+  selector:
+    app: node-exporter
 ```
 ```bash
 # Create the daemonset
@@ -198,7 +203,7 @@ scrape_configs:
 
     dns_sd_configs:
       - names:
-        - node-exporter.monitoring.svc.cluster.local
+        - node-exporter.<firstname-lastName.svc.cluster.local
         type: A
         port: 9100
 ```
@@ -215,7 +220,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: prometheus-deployment
-  namespace: monitoring
   labels:
     app: prometheus
     purpose: example
@@ -249,7 +253,6 @@ kind: Service
 apiVersion: v1
 metadata:
   name: prometheus-example-service
-  namespace: monitoring
 spec:
   selector:
     app: prometheus
@@ -258,9 +261,25 @@ spec:
   - name: promui
     protocol: TCP
     port: 9090
-    targetPort: 9090
-  type: LoadBalancer
+
+  type: NodePort
 ```
+
+## Now we must get the address and port where our server is listening
+
+```bash
+
+export NODE_IP=$(kubectl get nodes -o jsonpath="{.items[0].status.addresses[1].address}")
+export NODE_PORT=$(kubectl get  -o jsonpath="{.spec.ports[0].nodePort}" services prometheus-example-service)
+# this command will print the address we must put in our browser
+echo http://$NODE_IP:$NODE_PORT
+
+```
+## if you enter to that url you should see somethin like this if you run the query node_load15
+### this shows how there is a pod on each node monitoring its performance
+![prometheus server](daemonsets/prometheus-metrics.png)
+
+
 
 
 # Health Checks
