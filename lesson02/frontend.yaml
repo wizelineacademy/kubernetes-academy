@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+spec:
+  replicas:
+  selector:
+    matchLabels:
+  template:
+    metadata:
+      labels:
+    spec:
+      containers:
+        - name:
+          image:
+          ports:
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  type: NodePort
+  selector:
+  ports:
+    - protocol:
+      targetPort:
+      port:
+      nodePort:
