@@ -250,18 +250,55 @@ spec:
 
 # Secrets
 
+## Wordpress yaml file
+```bash
+# Create db host secret to wordpress file
+kubectl create secret generic db-host-secret --from-literal=wordpress-db='wordpress-mysql'
+
+# Create db password secret to wordpress file
+kubectl create secret generic db-password-secret --from-literal=wordpress-db-password='root'
+```
+
+Change env variables in wordpress.yaml file
+```yaml
+- name: WORDPRESS_DB_HOST
+  valueFrom:
+    secretKeyRef:
+      name: db-host-secret
+      key: wordpress-db
+- name: WORDPRESS_DB_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: db-password-secret
+      key: wordpress-db-password
+```
+
+## Wordpress-MySQL yaml file
 ```bash
 # Create user mysql secret to health check files
 kubectl create secret generic user-secret --from-literal=mysql-user='root'
 
 # Create password mysql secret to health check files
 kubectl create secret generic password-secret --from-literal=mysql-root-password='root'
+```
 
-# Delete user mysql secrets
-kubectl delete secret user-secret
+Change env variables in wordpress-mysql.yaml file
+```yaml
+- name: MYSQL_USER
+  valueFrom:
+    secretKeyRef:
+      name: user-secret
+      key: mysql-user
+- name: MYSQL_ROOT_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: password-secret
+      key: mysql-root-password
+```
 
-# Delete password mysql secrets
-kubectl delete secret password-secret
+```bash
+# Validate secrets
+kubectl get secrets
 ```
 
 # Health Checks
@@ -315,7 +352,7 @@ spec:
 apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
 kind: Deployment
 metadata:
-  name: wordpress-mysql-liveness
+  name: wordpress-mysql
   labels:
     app: wordpress
 spec:
@@ -447,7 +484,7 @@ spec:
 apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
 kind: Deployment
 metadata:
-  name: wordpress-mysql-readiness
+  name: wordpress-mysql
   labels:
     app: wordpress
 spec:
