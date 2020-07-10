@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: vote
+  name: vote
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vote
+  template:
+    metadata:
+      labels:
+        app: vote
+    spec:
+      containers:
+      - image: gcr.io/wizeline-academy-k8s-36bd66a7/vote-app:1
+        name: vote
+        ports:
+        - containerPort: 80
+          name: vote
