@@ -248,41 +248,130 @@ spec:
           claimName: mysql-pv-claim
 ```
 
-# Health Checks
-```bash
-# Create a health-check namespace
-kubectl create namespace health-check
-```
-
-## Secrets
+# Secrets
 
 ```bash
 # Create user mysql secret to health check files
-kubectl create secret generic user-secret --from-literal=mysql-user='root' -n health-check
+kubectl create secret generic user-secret --from-literal=mysql-user='root'
 
 # Create password mysql secret to health check files
-kubectl create secret generic password-secret --from-literal=mysql-root-password='root' -n health-check
+kubectl create secret generic password-secret --from-literal=mysql-root-password='root'
 
 # Delete user mysql secrets
-kubectl delete secret user-secret -n health-check
+kubectl delete secret user-secret
 
 # Delete password mysql secrets
-kubectl delete secret password-secret -n health-check
+kubectl delete secret password-secret
 ```
+
+# Health Checks
+* The kubelet uses liveness probes to know when to restart a container. 
+* The kubelet uses readiness probes to know when a container is ready to start accepting traffic. 
 
 ## Liveness
 
-[mysql-liveness.yaml](lesson02_health_checks/mysql-liveness.yaml)
+Many applications running for long periods of time eventually transition to broken states, and cannot recover except by being restarted. Kubernetes provides liveness probes to detect and remedy such situations.
+
+```yaml
+livenessProbe:
+  exec:
+    command: ["mysqladmin", "ping"]
+  initialDelaySeconds: 15
+  periodSeconds: 2
+  timeoutSeconds: 1
+```
+
+The complete code with the liveness probe is the following.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress-mysql
+  labels:
+    app: wordpress
+spec:
+  ports:
+    - port: 3306
+      protocol: TCP
+  selector:
+    app: wordpress
+    tier: mysql
+  clusterIP: None
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+  labels:
+    app: wordpress
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: wordpress-mysql-liveness
+  labels:
+    app: wordpress
+spec:
+  selector:
+    matchLabels:
+      app: wordpress
+      tier: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        tier: mysql
+    spec:
+      containers:
+      - image: mysql:5.6
+        name: mysql
+        env:
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: user-secret
+              key: mysql-user
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: password-secret
+              key: mysql-root-password
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+        livenessProbe:
+          exec:
+            command: ["mysqladmin", "ping"]
+          initialDelaySeconds: 15
+          periodSeconds: 2
+          timeoutSeconds: 1
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim
+```
 
 ```bash
 # Apply liveness yaml file
 kubectl apply -f mysql-liveness.yaml
 
 # Get pod name
-kubectl get pods -n health-check
+kubectl get pods
 
 # Validate liveness health-check
-kubectl describe pod wordpress-mysql-liveness-<id> -n health-check
+kubectl describe pod wordpress-mysql-liveness-<id>
 ```
 
 ### Events output
@@ -292,34 +381,133 @@ No problem with the pod.
 
 ```bash
 # Break the liveness probe
-kubectl exec -n health-check wordpress-mysql-liveness-<id> -c mysql -- mv /usr/bin/mysqladmin /usr/bin/mysqladmin.off
+kubectl exec wordpress-mysql-liveness-<id> -c mysql -- mv /usr/bin/mysqladmin /usr/bin/mysqladmin.off
 ```
 
 ### Events output
 
-Liveness probe failed and restart the mysql container.
+Liveness probe failed and the mysql container is restarted.
 ![Events Output](lesson02_health_checks/k8s_pod_event_2.png)
 
 ```bash
 # Validate health-check
-kubectl get pods -n health-check
+kubectl get pods
 # Delete deployment
 kubectl delete -f mysql-liveness.yaml
 ```
 
 ## Readiness
 
-[mysql-readiness.yaml](lesson02_health_checks/mysql-readiness.yaml)
+Sometimes, applications are temporarily unable to serve traffic. Kubernetes provides readiness probes to detect and mitigate these situations. A pod with containers reporting that they are not ready does not receive traffic through Kubernetes Services.
+
+```yaml
+readinessProbe:
+  exec:
+    command:
+      - bash 
+      - "-c" 
+      - | 
+        mysqladmin status -u$MYSQL_USER -p$MYSQL_ROOT_PASSWORD
+  initialDelaySeconds: 15
+  periodSeconds: 2
+  timeoutSeconds: 1
+```
+
+The complete code with the readiness probe is the following.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress-mysql
+  labels:
+    app: wordpress
+spec:
+  ports:
+    - port: 3306
+      protocol: TCP
+  selector:
+    app: wordpress
+    tier: mysql
+  clusterIP: None
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+  labels:
+    app: wordpress
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: wordpress-mysql-readiness
+  labels:
+    app: wordpress
+spec:
+  selector:
+    matchLabels:
+      app: wordpress
+      tier: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        tier: mysql
+    spec:
+      containers:
+      - image: mysql:5.6
+        name: mysql
+        env:
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: user-secret
+              key: mysql-user
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: password-secret
+              key: mysql-root-password
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+        readinessProbe:
+          exec:
+            command:
+              - bash 
+              - "-c" 
+              - | 
+                mysqladmin status -u$MYSQL_USER -p$MYSQL_ROOT_PASSWORD
+          initialDelaySeconds: 15
+          periodSeconds: 2
+          timeoutSeconds: 1
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim
+```
 
 ```bash
 # Apply readiness yaml file
 kubectl apply -f mysql-readiness.yaml
 
 # Get pod name
-kubectl get pods -n health-check
+kubectl get pods
 
 # Validate liveness health-check
-kubectl describe pod wordpress-mysql-readiness-<id> -n health-check
+kubectl describe pod wordpress-mysql-readiness-<id>
 ```
 
 ### Events output
@@ -330,7 +518,7 @@ No problem with the pod.
 
 ```bash
 # Break the readiness probe
-kubectl exec -n health-check wordpress-mysql-readiness-<id> -c mysql -- mv /usr/bin/mysqladmin /usr/bin/mysqladmin.off
+kubectl exec wordpress-mysql-readiness-<id> -c mysql -- mv /usr/bin/mysqladmin /usr/bin/mysqladmin.off
 ```
 
 ### Events output
@@ -340,12 +528,12 @@ Readiness probe failed.
 
 ```bash
 # Repair the readiness probe
-kubectl exec -n health-check <Pod name> -c mysql -- mv /usr/bin/mysqladmin.off /usr/bin/mysqladmin
+kubectl exec <Pod name> -c mysql -- mv /usr/bin/mysqladmin.off /usr/bin/mysqladmin
 ```
 
 ```bash
 # Validate health-check
-kubectl get pods -n health-check
+kubectl get pods
 # Delete deployment
 kubectl delete -f mysql-readiness.yaml
 ```

@@ -4,7 +4,6 @@ metadata:
   name: wordpress-mysql
   labels:
     app: wordpress
-  namespace: health-check
 spec:
   ports:
     - port: 3306
@@ -20,7 +19,6 @@ metadata:
   name: mysql-pv-claim
   labels:
     app: wordpress
-  namespace: health-check
 spec:
   accessModes:
     - ReadWriteOnce
@@ -34,7 +32,6 @@ metadata:
   name: wordpress-mysql
   labels:
     app: wordpress
-  namespace: health-check
 spec:
   replicas: 2
   selector:
