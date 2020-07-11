@@ -1,10 +1,14 @@
 # Table of contents
 
-* **[Preparation](#preparation)**
-* **[First steps](#first-steps)**
-* **[Namespaces](#namespaces)**
-  * **[Your own namespace](#important-create-your-own-namespace)**
-* **[Persisting Data](#persisting-data)**
+* Preparation
+* Application
+* Persisting Data
+* Secrets
+* Healthchecks
+* Resource Management
+* Daemonset
+* CronJob
+* Ingress
 
 # Preparation
 
@@ -63,7 +67,7 @@ One common example about how namespaces are used in real
 world scenarios is to separate application environments, like
 `development` and `production`.
 
-# Persisting Data
+# Wordpress application
 
 For this example we have a basic application in Wordpress with its database over MySQL.
 We're going to use offical MySQL and Wodpress docker images from DockerHub.
@@ -74,6 +78,7 @@ So, first we need to deploy MySQL database over our K8s with the next **svc** an
 
 This is a basic deployment and service k8s configuration
 
+wordpress-mysql.yaml
 ```yaml
 # This is the service
 apiVersion: v1
@@ -125,6 +130,7 @@ Then, we're going to deploy wordpress application.
 You would notice that for wordpress deployment we're going to use a **LoadBalancer** service kind instead of ClusterIP service.
 And we're going to use the name of database service such database host name.
 
+wordpress.yaml
 ```yaml
 apiVersion: v1
 kind: Service
@@ -174,15 +180,16 @@ spec:
 ### Test wordpress
 
 In order to test we have to:
-* set the initial configuration for wordpress
-* Then we have to create a new entry to the blog and show to audience
+* Set the initial configuration for wordpress
+* Then we can create a new entry in the blog for example
 * Destroy database and wordpress pods
 What happend if we visit wordpress URL again?. Content in database was flush and entry doesn't exist now
 
-## Using PVC to store data with MySQL
+# Persisting data
 
 For store data across pods we're going to use a **persistentVolume** and it will be use with a **persistentVolumeClaim** in our wordpress pod
 
+wordpress-mysql-pd.yaml
 ```yaml
 apiVersion: v1
 kind: Service
@@ -250,6 +257,15 @@ spec:
 
 # Secrets
 
+We are going to add the secret to our file:
+```yaml
+valueFrom:
+  secretKeyRef:
+    name: password-secret
+    key: mysql-root-password
+```
+
+To generate secrets manually we run:
 ```bash
 # Create user mysql secret to health check files
 kubectl create secret generic user-secret --from-literal=mysql-user='root'
@@ -264,6 +280,138 @@ kubectl delete secret user-secret
 kubectl delete secret password-secret
 ```
 
+We can create a folder called secrets where we are going to store our config files.
+
+wordpress-mysql-secrets.yaml
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress-mysql
+  labels:
+    app: wordpress
+spec:
+  ports:
+    - port: 3306
+  selector:
+    app: wordpress
+    tier: mysql
+  clusterIP: None
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+  labels:
+    app: wordpress
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: wordpress-mysql
+  labels:
+    app: wordpress
+spec:
+  selector:
+    matchLabels:
+      app: wordpress
+      tier: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        tier: mysql
+    spec:
+      containers:
+      - image: mysql:5.6
+        name: mysql
+        env:
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: user-secret
+              key: mysql-user
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: password-secret
+              key: mysql-root-password
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim
+```
+
+wordpress-secrets.yaml
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress
+  labels:
+    app: wordpress
+spec:
+  ports:
+    - port: 80
+  selector:
+    app: wordpress
+    tier: frontend
+  type: LoadBalancer
+---
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: wordpress
+  labels:
+    app: wordpress
+spec:
+  selector:
+    matchLabels:
+      app: wordpress
+      tier: frontend
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        tier: frontend
+    spec:
+      containers:
+      - image: wordpress:4.8-apache
+        name: wordpress
+        env:
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: user-secret
+              key: mysql-user
+        - name: WORDPRESS_DB_HOST
+          value: wordpress-mysql
+        - name: WORDPRESS_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: password-secret
+              key: mysql-root-password
+        ports:
+        - containerPort: 80
+          name: wordpress
+```
+
 # Health Checks
 * The kubelet uses liveness probes to know when to restart a container. 
 * The kubelet uses readiness probes to know when a container is ready to start accepting traffic. 
@@ -272,6 +420,7 @@ kubectl delete secret password-secret
 
 Many applications running for long periods of time eventually transition to broken states, and cannot recover except by being restarted. Kubernetes provides liveness probes to detect and remedy such situations.
 
+wordpress-mysql-liveness.yaml
 ```yaml
 livenessProbe:
   exec:
@@ -415,6 +564,7 @@ readinessProbe:
 
 The complete code with the readiness probe is the following.
 
+wordpress-mysql-readiness.yaml
 ```yaml
 apiVersion: v1
 kind: Service
@@ -541,7 +691,7 @@ kubectl delete -f mysql-readiness.yaml
 # Resource Management
 Now, we're going to define CPU and Memory requests and limits for our MySQL and Wordpress pods.
 
-- You will be adding the following `resources` section on each deployment. This section will add `requests` and `limits` resource management values.
+You will be adding the following `resources` section on each deployment. This section will add `requests` and `limits` resource management values.
 
 ```
 resources:
@@ -553,59 +703,22 @@ resources:
     cpu: "500m"
 ```
 
-- With the following commands you will apply the proper changes into your deployments.
-
-**MySQL Deployment**
-```
-cat <<EOF | kubectl apply -f -
-apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
-kind: Deployment
+wordpress-rm.yaml
+```yaml
+apiVersion: v1
+kind: Service
 metadata:
-  name: wordpress-mysql
+  name: wordpress
   labels:
     app: wordpress
 spec:
+  ports:
+    - port: 80
   selector:
-    matchLabels:
-      app: wordpress
-      tier: mysql
-  strategy:
-    type: Recreate
-  template:
-    metadata:
-      labels:
-        app: wordpress
-        tier: mysql
-    spec:
-      containers:
-      - image: mysql:5.6
-        name: mysql
-        env:
-        - name: MYSQL_ROOT_PASSWORD
-          value: root
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "250m"
-          limits:
-            memory: "128Mi"
-            cpu: "500m"
-        ports:
-        - containerPort: 3306
-          name: mysql
-        volumeMounts:
-        - name: mysql-persistent-storage
-          mountPath: /var/lib/mysql
-      volumes:
-      - name: mysql-persistent-storage
-        persistentVolumeClaim:
-          claimName: mysql-pv-claim
-EOF
-```
-
-**Wordpress Deployment**
-```
-cat <<EOF | kubectl apply -f -
+    app: wordpress
+    tier: frontend
+  type: LoadBalancer
+---
 apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
 kind: Deployment
 metadata:
@@ -629,10 +742,18 @@ spec:
       - image: wordpress:4.8-apache
         name: wordpress
         env:
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: user-secret
+              key: mysql-user
         - name: WORDPRESS_DB_HOST
           value: wordpress-mysql
         - name: WORDPRESS_DB_PASSWORD
-          value: root
+          valueFrom:
+            secretKeyRef:
+              name: password-secret
+              key: mysql-root-password
         resources:
           requests:
             memory: "64Mi"
@@ -643,14 +764,6 @@ spec:
         ports:
         - containerPort: 80
           name: wordpress
-        volumeMounts:
-        - name: wordpress-persistent-storage
-          mountPath: /var/www/html
-      volumes:
-      - name: wordpress-persistent-storage
-        persistentVolumeClaim:
-          claimName: wp-pv-claim
-EOF
 ```
 
 - Finally, verify that `requests` and `limits` have been applied.
@@ -694,27 +807,13 @@ mysql       map[cpu:250m memory:64Mi]   map[cpu:500m memory:128Mi]
 
 # Daemonset
 
-## First we are going to create a namespace for everything related to monitoring
-```yaml
-# monitor-ns.yml
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: monitoring
-```
-```bash
-# Create the namespace
-kubectl apply -f nginx-pod.yaml
-```
-## Then we create the Daemonset manifest file
-
+daemonset.yaml
 ```yaml
 # node-exporter.yaml
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: node-exporter
-  namespace: monitoring
   labels:
     app: node-exporter
 spec:
@@ -773,28 +872,42 @@ spec:
         - name: rootfs
           hostPath:
             path: /
+---
+kind: Service
+apiVersion: v1
+metadata:
+  annotations:
+    prometheus.io/scrape: 'true'
+  labels:
+    name: node-exporter
+  name: node-exporter
+spec:
+  clusterIP: None
+  ports:
+  - name: scrape
+    port: 9100
+    targetPort: 9100
+    protocol: TCP
+  selector:
+    app: node-exporter
 ```
-```bash
-# Create the daemonset
-kubectl apply -f node-exporter.yaml
-```
-## The prometheus server requires a config file to know what are the resources that is going to monitor
+
+#### The prometheus server requires a config file to know what are the resources that is going to monitor
+
+prometheus.yaml
 ```yaml
 global:
-  scrape_interval:     15s
-
+  scrape_interval:     15s 
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
 scrape_configs:
-
+  
   - job_name: 'node'
-
     # Override the global default and scrape targets from this job every 5 seconds.
     scrape_interval: 5s
-
     dns_sd_configs:
       - names:
-        - node-exporter.monitoring.svc.cluster.local
+        - node-exporter.<firstname-lastName.svc.cluster.local
         type: A
         port: 9100
 ```
@@ -802,16 +915,17 @@ scrape_configs:
 ## The way we pass this config file to the prometheus pod is through a configMap
 ```bash
 # Creating Configmap from file
-kubectl create configmap prometheus-example-cm --from-file=prometheus.yml
+kubectl create configmap prometheus-example-cm --from-file=prometheus.yaml
 ```
 
 ## Then we create a deployment for the prometheus server which will collect and display the metrics of each node and the service that will expose the server
+
+prometheus-deployment.yaml
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: prometheus-deployment
-  namespace: monitoring
   labels:
     app: prometheus
     purpose: example
@@ -845,7 +959,6 @@ kind: Service
 apiVersion: v1
 metadata:
   name: prometheus-example-service
-  namespace: monitoring
 spec:
   selector:
     app: prometheus
@@ -854,45 +967,36 @@ spec:
   - name: promui
     protocol: TCP
     port: 9090
-    targetPort: 9090
-  type: LoadBalancer
+  type: NodePort
 ```
+
+## Now we must get the address and port where our server is listening
+
+```bash
+export NODE_IP=$(kubectl get nodes -o jsonpath="{.items[0].status.addresses[1].address}")
+export NODE_PORT=$(kubectl get  -o jsonpath="{.spec.ports[0].nodePort}" services prometheus-example-service)
+# this command will print the address we must put in our browser
+echo http://$NODE_IP:$NODE_PORT
+```
+## if you enter to that url you should see somethin like this if you run the query node_load15
+### this shows how there is a pod on each node monitoring its performance
+![prometheus server](daemonsets/prometheus-metrics.png)
 
 # CronJob
 
-* Encrypt MySQL password, for example: echo -n 'password' | base64
-
-* Copy the output from the command above and save it into mysql-secret.yaml
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: mysecret
-type: Opaque
-data:
-  password: <passencrypted-output>
-```
-
-* Use this command to generate the secret:
-```
-kubectl apply -f mysql-secret.yaml
-```
-
-* Create a service account with storage-admin permission and generate key (to get the JSON file). Rename the file to service-account.json and store it where your Dockerfile is going to be placed
+* Create the folder jobs
+* Create a service account with storage-admin permission and generate key (to get the JSON file). Rename the file to service-account.json. 
 
 * Create a Dockerfile with this content:
 ```
 FROM google/cloud-sdk
-
 COPY service-account.json service-account.json
-
 RUN apt-get update && apt-get install -y mysql-client && rm -rf /var/lib/apt
 ```
 
 * Build image:
 ```
-docker build . -t gcr.io/<project_name>/<preffered-image-name>
+docker build . -t gcr.io/<project_id>/<preferred-image-name>
 ```
 
 * Push image:
@@ -900,7 +1004,9 @@ docker build . -t gcr.io/<project_name>/<preffered-image-name>
 docker push gcr.io/<project_name>/<preffered-image-name>
 ```
 
-* Create the cronjob yaml (mysql-cronjob.yaml)
+* Create the cronjob yaml and replace the values
+
+mysql-cronjob.yaml
 ```yaml
 apiVersion: batch/v1beta1
 kind: CronJob
@@ -940,7 +1046,7 @@ spec:
                 - mysqldump --user="${DB_USER}" --password="${DB_PASS}" --host="${DB_HOST}" "$@" "${DB_NAME}" > "${DB_NAME}-$(date '+%d|%m|%Y-%H:%M:%S')".sql; gcloud config set project ${GOOGLE_PROJECT}; gcloud auth activate-service-account --key-file "${GCS_SA}"; gsutil cp *.sql gs://"${GCS_BUCKET}"
 ```
 
-NOTE: This cronjob is activated every 10 mins. Check out the templates in [jobs folder](lesson05_jobs)
+NOTE: This cronjob is activated every 10 mins.
 
 # Ingress
 
@@ -1294,3 +1400,5 @@ Now try to access the app again. It should be working as expected.
 Type `exit` on your *Cloud Shell* session.
 
 Close your incognito browser window.
+
+
