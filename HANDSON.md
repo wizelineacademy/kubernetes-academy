@@ -1,14 +1,14 @@
 # Table of contents
 
-* Preparation
-* Application
-* Persisting Data
-* Secrets
-* Healthchecks
-* Resource Management
-* Daemonset
-* CronJob
-* Ingress
+* **[Preparation](#preparation)**
+* **[Application](#application)**
+* **[Persisting Data](#persisting-data)**
+* **[Secrets](#secrets)**
+* **[Healthchecks](#healthchecks)**
+* **[Resource Management](#resource-management)**
+* **[Daemonset](#daemonset)**
+* **[CronJob](#cronjob)**
+* **[Ingress](#ingress)**
 
 # Preparation
 
@@ -70,7 +70,7 @@ world scenarios is to separate application environments, like
 # Wordpress application
 
 For this example we have a basic application in Wordpress with its database over MySQL.
-We're going to use offical MySQL and Wodpress docker images from DockerHub.
+We're going to use official MySQL and Wordpress docker images from DockerHub.
 
 So, first we need to deploy MySQL database over our K8s with the next **svc** and **deployment** configuration.
 
@@ -125,6 +125,7 @@ spec:
         - containerPort: 3306
           name: mysql
 ```
+
 ## Wordpress application deployment
 Then, we're going to deploy wordpress application.
 You would notice that for wordpress deployment we're going to use a **LoadBalancer** service kind instead of ClusterIP service.
@@ -986,6 +987,7 @@ echo http://$NODE_IP:$NODE_PORT
 
 * Create the folder jobs
 * Create a service account with storage-admin permission and generate key (to get the JSON file). Rename the file to service-account.json. 
+* On tab "Storage", create a new bucket 
 
 * Create a Dockerfile with this content:
 ```
@@ -1034,8 +1036,8 @@ spec:
                 - name: DB_PASS
                   valueFrom:
                     secretKeyRef:
-                      name: mysecret
-                      key: password
+                      name: password-secret
+                      key: mysql-root-password
                 - name: GCS_BUCKET
                   value: <my-bucket>
                 - name: GCS_SA
@@ -1045,6 +1047,13 @@ spec:
                 - -c
                 - mysqldump --user="${DB_USER}" --password="${DB_PASS}" --host="${DB_HOST}" "$@" "${DB_NAME}" > "${DB_NAME}-$(date '+%d|%m|%Y-%H:%M:%S')".sql; gcloud config set project ${GOOGLE_PROJECT}; gcloud auth activate-service-account --key-file "${GCS_SA}"; gsutil cp *.sql gs://"${GCS_BUCKET}"
 ```
+
+* Verify what cronjobs we have scheduled
+```yaml
+kubectl get cronjobs
+```
+
+* Inspect the GCS bucket to see the backup files
 
 NOTE: This cronjob is activated every 10 mins.
 
