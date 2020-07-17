@@ -28,14 +28,6 @@ we'll use the editor to create the YAML files.
 
 # First steps
 
-## Inspecting the Cluster
-
-```bash
-kubectl get componentstatuses
-
-kubectl get nodes
-```
-
 # Namespaces
 
 ## IMPORTANT: Create your own namespace.
@@ -126,6 +118,11 @@ spec:
           name: mysql
 ```
 
+```bash
+# Create the MySQL database we will use for Wordpress
+kubectl apply -f wordpress-mysql.yaml
+```
+
 ## Wordpress application deployment
 Then, we're going to deploy wordpress application.
 You would notice that for wordpress deployment we're going to use a **LoadBalancer** service kind instead of ClusterIP service.
@@ -178,12 +175,23 @@ spec:
         - containerPort: 80
           name: wordpress
 ```
+```bash
+# Create the Wordpress application
+kubectl apply -f wordpress.yaml
+```
+
 ### Test wordpress
 
 In order to test we have to:
 * Set the initial configuration for wordpress
 * Then we can create a new entry in the blog for example
 * Destroy database and wordpress pods
+
+```bash
+# Delete both pods at the same time
+kubectl delete pods wordpress-mysql-<id> wordpress-<id>
+```
+
 What happend if we visit wordpress URL again?. Content in database was flush and entry doesn't exist now
 
 # Persisting data
@@ -254,6 +262,11 @@ spec:
       - name: mysql-persistent-storage
         persistentVolumeClaim:
           claimName: mysql-pv-claim
+```
+
+```bash
+# Create the new definition file
+kubectl apply -f wordpress-mysql-pd.yaml
 ```
 
 # Secrets
@@ -357,6 +370,11 @@ spec:
           claimName: mysql-pv-claim
 ```
 
+```bash
+# Update the MySQL deployment to contain secrets
+kubectl apply -f wordpress-mysql-secrets.yaml
+```
+
 wordpress-secrets.yaml
 ```yaml
 apiVersion: v1
@@ -413,15 +431,19 @@ spec:
           name: wordpress
 ```
 
+```bash
+# Update the Wordpress deployment to contain secrets
+kubectl apply -f wordpress-secrets.yaml
+```
+
 # Health Checks
-* The kubelet uses liveness probes to know when to restart a container. 
-* The kubelet uses readiness probes to know when a container is ready to start accepting traffic. 
+* The kubelet uses liveness probes to know when to restart a container.
+* The kubelet uses readiness probes to know when a container is ready to start accepting traffic.
 
 ## Liveness
 
 Many applications running for long periods of time eventually transition to broken states, and cannot recover except by being restarted. Kubernetes provides liveness probes to detect and remedy such situations.
 
-wordpress-mysql-liveness.yaml
 ```yaml
 livenessProbe:
   exec:
@@ -433,6 +455,7 @@ livenessProbe:
 
 The complete code with the liveness probe is the following.
 
+wordpress-mysql-liveness.yaml
 ```yaml
 apiVersion: v1
 kind: Service
@@ -465,7 +488,7 @@ spec:
 apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
 kind: Deployment
 metadata:
-  name: wordpress-mysql-liveness
+  name: wordpress-mysql
   labels:
     app: wordpress
 spec:
@@ -515,13 +538,13 @@ spec:
 
 ```bash
 # Apply liveness yaml file
-kubectl apply -f mysql-liveness.yaml
+kubectl apply -f wordpress-mysql-liveness.yaml
 
 # Get pod name
 kubectl get pods
 
 # Validate liveness health-check
-kubectl describe pod wordpress-mysql-liveness-<id>
+kubectl describe pod wordpress-mysql-<id>
 ```
 
 ### Events output
@@ -531,7 +554,7 @@ No problem with the pod.
 
 ```bash
 # Break the liveness probe
-kubectl exec wordpress-mysql-liveness-<id> -c mysql -- mv /usr/bin/mysqladmin /usr/bin/mysqladmin.off
+kubectl exec wordpress-mysql-<id> -c mysql -- mv /usr/bin/mysqladmin /usr/bin/mysqladmin.off
 ```
 
 ### Events output
@@ -542,8 +565,6 @@ Liveness probe failed and the mysql container is restarted.
 ```bash
 # Validate health-check
 kubectl get pods
-# Delete deployment
-kubectl delete -f mysql-liveness.yaml
 ```
 
 ## Readiness
@@ -554,9 +575,9 @@ Sometimes, applications are temporarily unable to serve traffic. Kubernetes prov
 readinessProbe:
   exec:
     command:
-      - bash 
-      - "-c" 
-      - | 
+      - bash
+      - "-c"
+      - |
         mysqladmin status -u$MYSQL_USER -p$MYSQL_ROOT_PASSWORD
   initialDelaySeconds: 15
   periodSeconds: 2
@@ -598,7 +619,7 @@ spec:
 apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
 kind: Deployment
 metadata:
-  name: wordpress-mysql-readiness
+  name: wordpress-mysql
   labels:
     app: wordpress
 spec:
@@ -637,9 +658,9 @@ spec:
         readinessProbe:
           exec:
             command:
-              - bash 
-              - "-c" 
-              - | 
+              - bash
+              - "-c"
+              - |
                 mysqladmin status -u$MYSQL_USER -p$MYSQL_ROOT_PASSWORD
           initialDelaySeconds: 15
           periodSeconds: 2
@@ -652,13 +673,13 @@ spec:
 
 ```bash
 # Apply readiness yaml file
-kubectl apply -f mysql-readiness.yaml
+kubectl apply -f wordpress-mysql-readiness.yaml
 
 # Get pod name
 kubectl get pods
 
 # Validate liveness health-check
-kubectl describe pod wordpress-mysql-readiness-<id>
+kubectl describe pod wordpress-mysql-<id>
 ```
 
 ### Events output
@@ -669,7 +690,7 @@ No problem with the pod.
 
 ```bash
 # Break the readiness probe
-kubectl exec wordpress-mysql-readiness-<id> -c mysql -- mv /usr/bin/mysqladmin /usr/bin/mysqladmin.off
+kubectl exec wordpress-mysql-<id> -c mysql -- mv /usr/bin/mysqladmin /usr/bin/mysqladmin.off
 ```
 
 ### Events output
@@ -679,14 +700,12 @@ Readiness probe failed.
 
 ```bash
 # Repair the readiness probe
-kubectl exec <Pod name> -c mysql -- mv /usr/bin/mysqladmin.off /usr/bin/mysqladmin
+kubectl exec wordpress-mysql-<id> -c mysql -- mv /usr/bin/mysqladmin.off /usr/bin/mysqladmin
 ```
 
 ```bash
 # Validate health-check
 kubectl get pods
-# Delete deployment
-kubectl delete -f mysql-readiness.yaml
 ```
 
 # Resource Management
@@ -767,6 +786,11 @@ spec:
           name: wordpress
 ```
 
+```bash
+# Apply the new yaml to the existing deployment
+kubectl apply -f wordpress-rm.yaml
+```
+
 - Finally, verify that `requests` and `limits` have been applied.
 ```
 # Using jq output manipulation
@@ -829,7 +853,7 @@ spec:
       annotations:
          prometheus.io/scrape: "true"
          prometheus.io/port: "9100"
-    spec: 
+    spec:
       hostPID: true
       hostIPC: true
       hostNetwork: true
@@ -895,20 +919,21 @@ spec:
 
 #### The prometheus server requires a config file to know what are the resources that is going to monitor
 
-prometheus.yaml
+prometheus.yml
+
 ```yaml
 global:
-  scrape_interval:     15s 
+  scrape_interval:     15s
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
 scrape_configs:
-  
+
   - job_name: 'node'
     # Override the global default and scrape targets from this job every 5 seconds.
     scrape_interval: 5s
     dns_sd_configs:
       - names:
-        - node-exporter.<firstname-lastName.svc.cluster.local
+        - node-exporter.<firstname-lastName>.svc.cluster.local   # Put your first and last name here
         type: A
         port: 9100
 ```
@@ -916,7 +941,7 @@ scrape_configs:
 ## The way we pass this config file to the prometheus pod is through a configMap
 ```bash
 # Creating Configmap from file
-kubectl create configmap prometheus-example-cm --from-file=prometheus.yaml
+kubectl create configmap prometheus-configmap --from-file=prometheus.yml
 ```
 
 ## Then we create a deployment for the prometheus server which will collect and display the metrics of each node and the service that will expose the server
@@ -954,7 +979,7 @@ spec:
       volumes:
         - name: config-volume
           configMap:
-           name: prometheus-example-cm # Here we use the configmap previously defined and it will be mount inside the container
+           name: prometheus-configmap # Here we use the configmap previously defined and it will be mount inside the container
 ---
 kind: Service
 apiVersion: v1
@@ -983,11 +1008,19 @@ echo http://$NODE_IP:$NODE_PORT
 ### this shows how there is a pod on each node monitoring its performance
 ![prometheus server](daemonsets/prometheus-metrics.png)
 
+We can clean pods for prometheus with
+
+```yaml
+kubectl delete -f daemonset.yaml
+kubectl delete -f prometheus-deployment.yaml
+```
+
 # CronJob
 
 * Create the folder jobs
-* Create a service account with storage-admin permission and generate key (to get the JSON file). Rename the file to service-account.json. 
-* On tab "Storage", create a new bucket 
+* Create a service account with storage-admin permission and generate key (to get the JSON file). Rename the file to service-account.json. (It can also be used a secret link to share the service account like https://onetimesecret.com/ or https://pastebin.pl)
+
+* Go to the tab "Storage", create a new bucket called "academy-advanced-<first-name>-<last-name>"
 
 * Create a Dockerfile with this content:
 ```
@@ -998,15 +1031,18 @@ RUN apt-get update && apt-get install -y mysql-client && rm -rf /var/lib/apt
 
 * Build image:
 ```
-docker build . -t gcr.io/<project_id>/<preferred-image-name>
+docker build . -t gcr.io/wizeline-academy-k8s-36bd66a7/<preferred-image-name>
 ```
 
 * Push image:
 ```
-docker push gcr.io/<project_name>/<preffered-image-name>
+docker push gcr.io/wizeline-academy-k8s-36bd66a7/<preffered-image-name>
 ```
 
 * Create the cronjob yaml and replace the values
+
+
+NOTE: This cronjob is activated every 10 mins.
 
 mysql-cronjob.yaml
 ```yaml
@@ -1023,10 +1059,10 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: mysql-backup
-              image: gcr.io/<project_name>/<prefered-image-name>
+              image: gcr.io/wizeline-academy-k8s-36bd66a7/<prefered-image-name>
               env:
                 - name: GOOGLE_PROJECT
-                  value: <google-project>
+                  value: wizeline-academy-k8s
                 - name: DB_HOST
                   value: wordpress-mysql
                 - name: DB_USER
@@ -1048,14 +1084,27 @@ spec:
                 - mysqldump --user="${DB_USER}" --password="${DB_PASS}" --host="${DB_HOST}" "$@" "${DB_NAME}" > "${DB_NAME}-$(date '+%d|%m|%Y-%H:%M:%S')".sql; gcloud config set project ${GOOGLE_PROJECT}; gcloud auth activate-service-account --key-file "${GCS_SA}"; gsutil cp *.sql gs://"${GCS_BUCKET}"
 ```
 
+```bash
+# Create cronjob
+kubectl apply -f mysql-cronjob.yaml
+```
+
 * Verify what cronjobs we have scheduled
-```yaml
+```bash
 kubectl get cronjobs
+```
+
+* See the pods and wait for a job to be completed
+```bash
+kubectl get pods
 ```
 
 * Inspect the GCS bucket to see the backup files
 
-NOTE: This cronjob is activated every 10 mins.
+* Delete the cronjob, so it does not keep adding more files to the bucket
+```bash
+kubectl delete -f mysql-cronjob.yaml
+```
 
 # Ingress
 
@@ -1070,9 +1119,8 @@ Google Cloud Shell Editor can be used to easily create these files.
 
 This files will create the necessary resources for our vote & result apps.
 
+voting-app.yaml
 ```yaml
-# Using the Google Cloud Shell Editor
-# Create the file db-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -1106,11 +1154,7 @@ spec:
       volumes:
       - name: db-data
         emptyDir: {}
-```
-
-```yaml
-# Using the Google Cloud Shell Editor
-# Create the file db-service.yaml
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -1125,11 +1169,7 @@ spec:
     targetPort: 5432
   selector:
     app: db
-```
-
-```yaml
-# Using the Google Cloud Shell Editor
-# Create the file redis-deployment.yaml
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -1158,11 +1198,7 @@ spec:
       volumes:
       - name: redis-data
         emptyDir: {}
-```
-
-```yaml
-# Using the Google Cloud Shell Editor
-# Create the file redis-service.yaml
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -1177,11 +1213,7 @@ spec:
     targetPort: 6379
   selector:
     app: redis
-```
-
-```yaml
-# Using the Google Cloud Shell Editor
-# Create the file result-deployment.yaml
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -1204,11 +1236,7 @@ spec:
         ports:
         - containerPort: 80
           name: result
-```
-
-```yaml
-# Using the Google Cloud Shell Editor
-# Create the file result-service.yaml
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -1221,14 +1249,9 @@ spec:
   - name: "result-service"
     port: 5001
     targetPort: 80
-    nodePort: 31001
   selector:
     app: result
-```
-
-```yaml
-# Using the Google Cloud Shell Editor
-# Create the file vote-deployment.yaml
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -1251,11 +1274,7 @@ spec:
         ports:
         - containerPort: 80
           name: vote
-```
-
-```yaml
-# Using the Google Cloud Shell Editor
-# Create the file vote-service.yaml
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -1268,14 +1287,9 @@ spec:
   - name: "vote-service"
     port: 5000
     targetPort: 80
-    nodePort: 31000
   selector:
     app: vote
-```
-
-```yaml
-# Using the Google Cloud Shell Editor
-# Create the file worker-deployment.yaml
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -1297,6 +1311,11 @@ spec:
         name: worker
 ```
 
+```bash
+# Use kubectl to apply changes
+kubectl apply -f voting-app.yaml
+```
+
 Now, we will create the ingress object to access our apps.
 
 Since GCP Ingress Controller doesn't fully support all the features we need, we will be using the NGINX Ingress Controller. To do this, first we will need to install HELM and the NGINX Ingress Controller charts:
@@ -1311,6 +1330,7 @@ chmod +x get_helm.sh
 ```bash
 # Configure RBAC and Service Accounts for Tiller
 # Install helm using tiller service account
+# Just for reference - DO NOT RUN
 kubectl create serviceaccount --namespace kube-system tiller
 kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
 helm init --service-account tiller
@@ -1331,9 +1351,8 @@ helm install --name nginx-ingress stable/nginx-ingress --set rbac.create=true --
 kubectl get service nginx-ingress-controller
 ```
 
+ingress.yaml
 ```yaml
-# Using the Google Cloud Shell Editor
-# Create the file ingress.yaml
 apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
@@ -1377,9 +1396,8 @@ The changes that we will perform are:
 
 After those changes, our `ingress.yaml` should look like this:
 
+ingress.yaml
 ```yaml
-# Using the Google Cloud Shell Editor
-# Edit the file ingress.yaml
 apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
