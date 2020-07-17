@@ -421,7 +421,6 @@ spec:
 
 Many applications running for long periods of time eventually transition to broken states, and cannot recover except by being restarted. Kubernetes provides liveness probes to detect and remedy such situations.
 
-
 ```yaml
 livenessProbe:
   exec:
@@ -896,8 +895,8 @@ spec:
 
 #### The prometheus server requires a config file to know what are the resources that is going to monitor
 
-
 prometheus.yml
+
 ```yaml
 global:
   scrape_interval:     15s 
@@ -992,7 +991,6 @@ kubectl delete -f daemonset.yaml
 kubectl delete -f prometheus-deployment.yaml
 ```
 
-
 # CronJob
 
 * Create the folder jobs
@@ -1018,6 +1016,7 @@ docker push gcr.io/wizeline-academy-k8s-36bd66a7/<preffered-image-name>
 ```
 
 * Create the cronjob yaml and replace the values
+
 
 NOTE: This cronjob is activated every 10 mins.
 
