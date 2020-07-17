@@ -421,7 +421,7 @@ spec:
 
 Many applications running for long periods of time eventually transition to broken states, and cannot recover except by being restarted. Kubernetes provides liveness probes to detect and remedy such situations.
 
-wordpress-mysql-liveness.yaml
+
 ```yaml
 livenessProbe:
   exec:
@@ -433,6 +433,7 @@ livenessProbe:
 
 The complete code with the liveness probe is the following.
 
+wordpress-mysql-liveness.yaml
 ```yaml
 apiVersion: v1
 kind: Service
@@ -465,7 +466,7 @@ spec:
 apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
 kind: Deployment
 metadata:
-  name: wordpress-mysql-liveness
+  name: wordpress-mysql
   labels:
     app: wordpress
 spec:
@@ -521,7 +522,7 @@ kubectl apply -f mysql-liveness.yaml
 kubectl get pods
 
 # Validate liveness health-check
-kubectl describe pod wordpress-mysql-liveness-<id>
+kubectl describe pod wordpress-mysql-<id>
 ```
 
 ### Events output
@@ -531,7 +532,7 @@ No problem with the pod.
 
 ```bash
 # Break the liveness probe
-kubectl exec wordpress-mysql-liveness-<id> -c mysql -- mv /usr/bin/mysqladmin /usr/bin/mysqladmin.off
+kubectl exec wordpress-mysql-<id> -c mysql -- mv /usr/bin/mysqladmin /usr/bin/mysqladmin.off
 ```
 
 ### Events output
@@ -598,7 +599,7 @@ spec:
 apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
 kind: Deployment
 metadata:
-  name: wordpress-mysql-readiness
+  name: wordpress-mysql
   labels:
     app: wordpress
 spec:
@@ -658,7 +659,7 @@ kubectl apply -f mysql-readiness.yaml
 kubectl get pods
 
 # Validate liveness health-check
-kubectl describe pod wordpress-mysql-readiness-<id>
+kubectl describe pod wordpress-mysql-<id>
 ```
 
 ### Events output
@@ -669,7 +670,7 @@ No problem with the pod.
 
 ```bash
 # Break the readiness probe
-kubectl exec wordpress-mysql-readiness-<id> -c mysql -- mv /usr/bin/mysqladmin /usr/bin/mysqladmin.off
+kubectl exec wordpress-mysql-<id> -c mysql -- mv /usr/bin/mysqladmin /usr/bin/mysqladmin.off
 ```
 
 ### Events output
@@ -895,7 +896,8 @@ spec:
 
 #### The prometheus server requires a config file to know what are the resources that is going to monitor
 
-prometheus.yaml
+
+prometheus.yml
 ```yaml
 global:
   scrape_interval:     15s 
@@ -908,7 +910,7 @@ scrape_configs:
     scrape_interval: 5s
     dns_sd_configs:
       - names:
-        - node-exporter.<firstname-lastName.svc.cluster.local
+        - node-exporter.<firstname-lastName>.svc.cluster.local   # Put your first and last name here
         type: A
         port: 9100
 ```
@@ -916,7 +918,7 @@ scrape_configs:
 ## The way we pass this config file to the prometheus pod is through a configMap
 ```bash
 # Creating Configmap from file
-kubectl create configmap prometheus-example-cm --from-file=prometheus.yaml
+kubectl create configmap prometheus-configmap --from-file=prometheus.yml
 ```
 
 ## Then we create a deployment for the prometheus server which will collect and display the metrics of each node and the service that will expose the server
@@ -954,7 +956,7 @@ spec:
       volumes:
         - name: config-volume
           configMap:
-           name: prometheus-example-cm # Here we use the configmap previously defined and it will be mount inside the container
+           name: prometheus-configmap # Here we use the configmap previously defined and it will be mount inside the container
 ---
 kind: Service
 apiVersion: v1
@@ -983,11 +985,20 @@ echo http://$NODE_IP:$NODE_PORT
 ### this shows how there is a pod on each node monitoring its performance
 ![prometheus server](daemonsets/prometheus-metrics.png)
 
+We can clean pods for prometheus with
+
+```yaml
+kubectl delete -f daemonset.yaml
+kubectl delete -f prometheus-deployment.yaml
+```
+
+
 # CronJob
 
 * Create the folder jobs
-* Create a service account with storage-admin permission and generate key (to get the JSON file). Rename the file to service-account.json. 
-* On tab "Storage", create a new bucket 
+* Create a service account with storage-admin permission and generate key (to get the JSON file). Rename the file to service-account.json. (It can also be used a secret link to share the service account like https://onetimesecret.com/ or https://pastebin.pl)
+ 
+* Go to the tab "Storage", create a new bucket called "academy-advanced-<first-name>-<last-name>" 
 
 * Create a Dockerfile with this content:
 ```
@@ -998,15 +1009,17 @@ RUN apt-get update && apt-get install -y mysql-client && rm -rf /var/lib/apt
 
 * Build image:
 ```
-docker build . -t gcr.io/<project_id>/<preferred-image-name>
+docker build . -t gcr.io/wizeline-academy-k8s-36bd66a7/<preferred-image-name>
 ```
 
 * Push image:
 ```
-docker push gcr.io/<project_name>/<preffered-image-name>
+docker push gcr.io/wizeline-academy-k8s-36bd66a7/<preffered-image-name>
 ```
 
 * Create the cronjob yaml and replace the values
+
+NOTE: This cronjob is activated every 10 mins.
 
 mysql-cronjob.yaml
 ```yaml
@@ -1023,10 +1036,10 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: mysql-backup
-              image: gcr.io/<project_name>/<prefered-image-name>
+              image: gcr.io/wizeline-academy-k8s-36bd66a7/<prefered-image-name>
               env:
                 - name: GOOGLE_PROJECT
-                  value: <google-project>
+                  value: wizeline-academy-k8s
                 - name: DB_HOST
                   value: wordpress-mysql
                 - name: DB_USER
@@ -1053,9 +1066,17 @@ spec:
 kubectl get cronjobs
 ```
 
+* See the pods and wait for a job to be completed
+```yaml
+kubectl get pods
+```
+
 * Inspect the GCS bucket to see the backup files
 
-NOTE: This cronjob is activated every 10 mins.
+* Delete the cronjob, so it does not keep adding more files to the bucket
+```yaml
+kubectl delete -f mysql-cronjob.yaml
+```
 
 # Ingress
 
