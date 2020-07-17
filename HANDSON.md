@@ -699,11 +699,6 @@ Readiness probe failed.
 ![Events Output](lesson02_health_checks/k8s_pod_event_4.png)
 
 ```bash
-# Repair the readiness probe
-kubectl exec wordpress-mysql-<id> -c mysql -- mv /usr/bin/mysqladmin.off /usr/bin/mysqladmin
-```
-
-```bash
 # Validate health-check
 kubectl get pods
 ```
