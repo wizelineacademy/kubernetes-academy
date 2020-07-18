@@ -862,9 +862,6 @@ spec:
          prometheus.io/scrape: "true"
          prometheus.io/port: "9100"
     spec:
-      hostPID: true
-      hostIPC: true
-      hostNetwork: true
       containers:
         - ports:
             - containerPort: 9100
@@ -924,7 +921,10 @@ spec:
   selector:
     app: node-exporter
 ```
-
+```bash
+# Creating Deamonset
+kubectl apply -f daemonset.yaml
+```
 #### The prometheus server requires a config file to know what are the resources that is going to monitor
 
 prometheus.yml
@@ -1004,6 +1004,11 @@ spec:
   type: NodePort
 ```
 
+```bash
+# Creating deployment
+kubectl apply -f prometheus-deployment.yaml
+```
+
 ## Now we must get the address and port where our server is listening
 
 ```bash
@@ -1014,7 +1019,7 @@ echo http://$NODE_IP:$NODE_PORT
 ```
 ## if you enter to that url you should see somethin like this if you run the query node_load15
 ### this shows how there is a pod on each node monitoring its performance
-![prometheus server](daemonsets/prometheus-metrics.png)
+![prometheus server](lesson04_daemonsets/prometheus-metrics.png)
 
 We can clean pods for prometheus with
 
@@ -1426,7 +1431,10 @@ spec:
           serviceName: result
           servicePort: 5001
 ```
-
+```bash
+# Create the Ingress object
+kubectl apply -f ingress.yaml
+```
 Now try to access the app again. It should be working as expected.
 
 
