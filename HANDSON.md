@@ -466,7 +466,6 @@ metadata:
 spec:
   ports:
     - port: 3306
-      protocol: TCP
   selector:
     app: wordpress
     tier: mysql
@@ -563,7 +562,7 @@ Liveness probe failed and the mysql container is restarted.
 ![Events Output](lesson02_health_checks/k8s_pod_event_2.png)
 
 ```bash
-# Validate health-check
+# Verify restarts in pod
 kubectl get pods
 ```
 
@@ -597,7 +596,6 @@ metadata:
 spec:
   ports:
     - port: 3306
-      protocol: TCP
   selector:
     app: wordpress
     tier: mysql
@@ -698,10 +696,25 @@ kubectl exec wordpress-mysql-<id> -c mysql -- mv /usr/bin/mysqladmin /usr/bin/my
 Readiness probe failed.
 ![Events Output](lesson02_health_checks/k8s_pod_event_4.png)
 
+
 ```bash
-# Validate health-check
+# Verify pod READY flag
 kubectl get pods
 ```
+
+Verify in the browser that exists a problem with the database because is not ready.
+
+```bash
+# Fix the readiness probe
+kubectl exec wordpress-mysql-<id> -c mysql -- mv /usr/bin/mysqladmin.off /usr/bin/mysqladmin
+```
+
+```bash
+# Verify pod READY flag
+kubectl get pods
+```
+
+Verify in the browser that all is working now.
 
 # Resource Management
 Now, we're going to define CPU and Memory requests and limits for our MySQL and Wordpress pods.
