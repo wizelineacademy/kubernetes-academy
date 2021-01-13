@@ -731,7 +731,8 @@ resources:
     cpu: "500m"
 ```
 
-wordpress-rm.yaml
+**wordpress-rm.yaml**
+
 ```yaml
 apiVersion: v1
 kind: Service
@@ -819,23 +820,12 @@ kubectl get pods  --selector=app=wordpress  -o=custom-columns='Container:spec.co
     "memory": "64Mi"
   }
 }
-{
-  "limits": {
-    "cpu": "500m",
-    "memory": "128Mi"
-  },
-  "requests": {
-    "cpu": "250m",
-    "memory": "64Mi"
-  }
-}
 ```
 
 **Output without jq**
 ```
 Container   Requests                    Limits
 wordpress   map[cpu:250m memory:64Mi]   map[cpu:500m memory:128Mi]
-mysql       map[cpu:250m memory:64Mi]   map[cpu:500m memory:128Mi]
 ```
 
 # Daemonset
