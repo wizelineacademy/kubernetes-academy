@@ -1438,6 +1438,91 @@ kubectl apply -f ingress.yaml
 Now try to access the app again. It should be working as expected.
 
 
+# CronJob
+
+* Encrypt MySQL password, for example: echo -n 'password' | base64
+
+* Copy the output from the command above and save it into mysql-secret.yaml
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+type: Opaque
+data:
+  password: <passencrypted-output>
+```
+
+* Use this command to generate the secret:
+``` 
+kubectl apply -f mysql-secret.yaml 
+```
+
+* Create a service account with storage-admin permission and generate key (to get the JSON file). Rename the file to service-account.json and store it where your Dockerfile is going to be placed
+
+* Create a Dockerfile with this content:
+```
+FROM google/cloud-sdk
+
+COPY service-account.json service-account.json
+
+RUN apt-get update && apt-get install -y mysql-client && rm -rf /var/lib/apt
+```
+
+* Build image:
+``` 
+docker build . -t gcr.io/<project_name>/<preffered-image-name>
+```
+
+* Push image:
+```
+docker push gcr.io/<project_name>/<preffered-image-name>
+```
+
+* Create the cronjob yaml (mysql-cronjob.yaml)
+```yaml
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: mysql-backup
+spec:
+  schedule: "*/10 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: mysql-backup
+              image: gcr.io/<project_name>/<prefered-image-name>
+              env:
+                - name: GOOGLE_PROJECT
+                  value: <google-project>
+                - name: DB_HOST
+                  value: wordpress-mysql
+                - name: DB_USER
+                  value: root
+                - name: DB_NAME
+                  value: mysql
+                - name: DB_PASS
+                  valueFrom:
+                    secretKeyRef:
+                      name: mysecret
+                      key: password
+                - name: GCS_BUCKET
+                  value: <my-bucket>
+                - name: GCS_SA
+                  value: service-account.json
+              args:
+                - /bin/bash
+                - -c
+                - mysqldump --user="${DB_USER}" --password="${DB_PASS}" --host="${DB_HOST}" "$@" "${DB_NAME}" > "${DB_NAME}-$(date '+%d|%m|%Y-%H:%M:%S')".sql; gcloud config set project ${GOOGLE_PROJECT}; gcloud auth activate-service-account --key-file "${GCS_SA}"; gsutil cp *.sql gs://"${GCS_BUCKET}"
+``` 
+
+NOTE: This cronjob is activated every 10 mins. Check out the templates in [jobs folder](jobs)
+
+
 # Clean up
 
 Type `exit` on your *Cloud Shell* session.
